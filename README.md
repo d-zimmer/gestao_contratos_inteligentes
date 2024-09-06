@@ -24,14 +24,24 @@ A adoção de contratos inteligentes na engenharia de software, especificamente 
 ## 2.1 Tema do Projeto
 O projeto visa criar um sistema de contratos inteligentes, utilizando a tecnologia blockchain, para gerenciar contratos de aluguel. A solução proposta pretende automatizar a execução de contratos, assegurando que os termos acordados sejam cumpridos sem a necessidade de intermediários.
 
-## 2.2 Problemas a Resolver
-- Burocracia excessiva e ineficiência nos processos tradicionais de locação.
-- Falta de confiança entre locadores e locatários.
-- Dificuldades na verificação e execução de contratos.
+### 2.2 Problemas a Resolver
+Os principais problemas a serem abordados são:
 
-## 2.3 Limitações
-- O projeto não abordará questões legais específicas de diferentes jurisdições.
-- Não se pretende resolver problemas relacionados à manutenção dos imóveis alugados.
+   - Reduzir a necessidade de intermediários e a burocracia associada à criação e gestão de contratos de aluguel.
+   - Aumentar a transparência e a confiança entre locador e locatário ao garantir que os termos do contrato sejam imutáveis e executados conforme acordado.
+   - Automatizar a execução dos termos do contrato, como pagamentos e notificações, para minimizar erros e disputas.
+   - Proteger a integridade dos contratos e dados pessoais, evitando alterações não autorizadas e fraudes.
+
+### 2.3 Limitações
+É importante ressaltar as delimitações dos problemas que o projeto não abordará:
+
+   - Não será adaptado para as leis de aluguel de diferentes países ou regiões.
+   - Não haverá funcionalidades para a gestão de reparos, vistorias ou manutenção do imóvel.
+   - Pagamentos fora do ambiente blockchain precisarão ser processados por plataformas externas.
+   - A plataforma não substituirá a necessidade de validação por cartórios ou advogados especializados.
+   - A interface e a documentação estarão disponíveis apenas em português brasileiro.
+   - O projeto não incluirá versões para dispositivos móveis neste estágio.
+   - Não haverá suporte para exportação de dados para análise externa ou relatórios fiscais.
 
 ## 3. Especificação Técnica
 
