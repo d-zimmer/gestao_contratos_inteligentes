@@ -32,3 +32,77 @@ O projeto visa criar um sistema de contratos inteligentes, utilizando a tecnolog
 ## 2.3 Limitações
 - O projeto não abordará questões legais específicas de diferentes jurisdições.
 - Não se pretende resolver problemas relacionados à manutenção dos imóveis alugados.
+
+## 3. Especificação Técnica
+
+### 3.1 Requisitos de Software
+
+#### 3.1.1 Lista de Requisitos
+- **Requisitos Funcionais (RF):**
+  1. O sistema deve permitir a criação de contratos de aluguel baseados em blockchain.
+  2. O sistema deve automatizar a execução de contratos, sem necessidade de intermediários.
+  3. O sistema deve garantir que os termos do contrato sejam imutáveis e executados automaticamente.
+
+- **Requisitos Não-Funcionais (RNF):**
+  1. O sistema deve garantir a segurança e privacidade dos dados.
+  2. A plataforma deve ter alta disponibilidade (99% uptime).
+  3. O sistema deve ser escalável para atender a um grande número de contratos simultaneamente.
+
+#### 3.1.2 Representação dos Requisitos
+- Diagrama de Casos de Uso (UML) será desenvolvido para representar as interações dos usuários com o sistema.
+
+### 3.2 Considerações de Design
+
+#### 3.2.1 Visão Inicial da Arquitetura
+O sistema será composto por três componentes principais:
+- **Interface do Usuário:** Plataforma web ou móvel para interação com os contratos.
+- **Servidor de Aplicação:** Onde os contratos inteligentes serão gerados e monitorados.
+- **Blockchain:** Rede para armazenar e executar os contratos de forma imutável.
+
+#### 3.2.2 Padrões de Arquitetura
+- **Padrão Arquitetural:** O projeto utilizará o padrão **MVC (Model-View-Controller)** para separar a lógica de negócios da interface de usuário.
+- **Modelo de Microserviços:** Considerado para dividir as funções em serviços independentes.
+
+#### 3.2.3 Modelos C4
+- **Contexto:** O sistema interage com usuários e a rede blockchain.
+- **Contêineres:** Serviços web, APIs e o módulo de blockchain.
+- **Componentes:** Cada contêiner contém componentes responsáveis por tarefas específicas, como a criação e execução de contratos.
+- **Código:** O design do código será modular, com separação clara das responsabilidades.
+
+### 3.3 Stack Tecnológica
+
+#### 3.3.1 Linguagens de Programação
+- **Solidity:** Para a criação dos contratos inteligentes.
+- **JavaScript/TypeScript:** Para a interface do usuário e integração com a blockchain.
+- **Python:** Para lógica backend e automação de processos.
+
+#### 3.3.2 Frameworks e Bibliotecas
+- **React ou Angular:** Frameworks para a criação da interface de usuário.
+- **Web3.js:** Biblioteca para interagir com o Ethereum blockchain.
+- **Flask/Django:** Para a lógica backend do sistema.
+
+#### 3.3.3 Ferramentas de Desenvolvimento e Gestão de Projeto
+- **GitLab:** Para controle de versão e gerenciamento de projeto.
+- **Trello:** Para acompanhamento das tarefas e cronograma.
+
+### 3.4 Considerações de Segurança
+- **Segurança da Blockchain:** Utilizar blockchain Ethereum para garantir a imutabilidade dos contratos.
+- **Autenticação e Autorização:** Implementação de autenticação via **OAuth** para proteger as transações.
+- **Mitigação de Ataques:** Medidas contra ataques de **Sybil** e **replay attacks** através da validação de identidade e tokens temporários.
+
+## 4. Próximos Passos
+
+- **Portfólio I:** Desenvolvimento do protótipo inicial e avaliação da arquitetura.
+- **Portfólio II:** Implementação completa, testes e validação do sistema.
+- **Cronograma:** Estimar prazos para o desenvolvimento e entrega das fases do projeto.
+
+## 5. Referências
+
+- Nakamoto, S. (2008). Bitcoin: A Peer-to-Peer Electronic Cash System.
+- Wood, G. (2014). Ethereum: A Secure Decentralized Generalized Transaction Ledger.
+- Documentation for Solidity, Ethereum, Web3.js, Flask.
+
+## 6. Apêndices (Opcionais)
+
+- Anexos com exemplos de contratos inteligentes.
+- Código fonte detalhado dos principais componentes do sistema.
