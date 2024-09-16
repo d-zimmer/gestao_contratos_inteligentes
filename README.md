@@ -5,17 +5,17 @@
 - **Data de Entrega:** 02/12/2024
 
 # **Resumo**
-NEste trabalho É apresentaDA uma solução baseada em contratos inteligentes, utilizando a tecnologia blockchain, para a gestão de contratos de aluguel. O projeto busca melhorar a segurança, transparência e eficiência nos processos de locação, resolvendo problemas TAIS como falta de confiança entre as partes e processos burocráticos, RASTREABILIDADE. NESTE documento É contextUALIZADO A tecnologia blockchain, justificando sua aplicação no setor imobiliário, os objetivos do projeto, e a descrição detalhada da solução proposta SÃO APRESENTADAS NAS PRÓXIMAS SEÇÕES.
+Neste trabalho é apresentada uma solução baseada em contratos inteligentes, utilizando a tecnologia blockchain, para a gestão de contratos de aluguel. O projeto busca melhorar a segurança, transparência e eficiência nos processos de locação, resolvendo problemas tais como falta de confiança entre as partes, processos burocráticos e rastreabilidade. Neste documento é contextualizado a tecnologia blockchain, justificando sua aplicação no setor imobiliário, os objetivos do projeto, e a descrição detalhada da solução proposta são apresenadas nas próximas seções.
 
 # **1. Introdução**
 ## 1.1 Contexto
-Com a digitalização crescente em diversas áreas, o setor imobiliário enfrenta desafios relacionados à segurança e à transparência nos processos de locação, BEM COMO A RASTREABILIADE DE DOCUMENTOS DIGITAIS. A tecnologia blockchain, com sua capacidade de oferecer registros imutáveis e seguros, surge como uma POSSÍVEL solução promissora para esses desafios.
+Com a digitalização crescente em diversas áreas, o setor imobiliário enfrenta desafios relacionados à segurança e à transparência nos processos de locação, bem como a rastreabilidade de documentos digitais. A tecnologia blockchain, com sua capacidade de oferecer registros imutáveis e seguros, surge como uma possível solução promissora para esses desafios.
 
 ## 1.2 Justificativa
 A adoção de contratos inteligentes na engenharia de software, especificamente em contratos de aluguel, pode revolucionar a forma como acordos são gerenciados, reduzindo a burocracia e aumentando a confiança entre locadores e locatários. Este projeto é relevante para o campo da engenharia de software pois explora uma aplicação prática e inovadora da blockchain, um tema em ascensão.
 
 ## 1.3 Objetivos
-- **Objetivo Principal:** Desenvolver uma plataforma de contratos de aluguel inteligente que utilize a tecnologia blockchain para garantir segurança, RASTREABILIDADE e transparência.
+- **Objetivo Principal:** Desenvolver uma plataforma de contratos de aluguel inteligente que utilize a tecnologia blockchain para garantir segurança, rastreabilidade e transparência.
 - **Objetivos Secundários:**
   - Analisar as limitações e desafios da implementação de blockchain no setor imobiliário.
   - Avaliar a eficiência da solução proposta em comparação aos métodos tradicionais.
