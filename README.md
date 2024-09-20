@@ -92,10 +92,7 @@ O sistema será composto por estes componentes principais:
 - **Blockchain Ethereum:** Onde os contratos inteligentes são implantados e executados.
 - **Banco de Dados PostgreSQL/MongoDB:** Armazena dados auxiliares e relacionados aos contratos.
 
-#### 3.2.2 Padrões de Arquitetura
-
-
-#### 3.2.3 Modelos C4 (A SER DESENVOLVIDO)
+#### 3.2.2 Modelos C4
 
 ### 3.3 Stack Tecnológica
 
