@@ -92,7 +92,7 @@ O sistema será composto por estes componentes principais:
 #### 3.2.2 Modelos C4
 
 Os modelos C4 (Context, Containers, Components, Code) oferecem uma estrutura robusta para detalhar a arquitetura de um sistema em diferentes níveis de abstração.
-![image](https://github.com/user-attachments/assets/ce3a8eec-8c28-4bb7-884b-8bfca574d7b7)
+![image](https://github.com/user-attachments/assets/e8166e2c-0da7-477a-9d80-e5f10e68b09d)
 O diagrama de contexto do sistema de Gestão de Contratos Inteligentes, destacando os principais atores externos e suas interações com o sistema, são eles:
 
 - **Locador (Usuário):** Utiliza um navegador web para interagir com o sistema;
