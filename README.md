@@ -80,12 +80,15 @@ Os principais problemas a serem abordados são:
 - Diagrama de Casos de Uso (UML) 
 
 ### 3.2 Considerações de Design (A SER DESENVOLVIDO)
-
 #### 3.2.1 Visão Inicial da Arquitetura
-O sistema será composto por três componentes principais:
-- **Interface do Usuário:** Plataforma web ou móvel para interação com os contratos.
-- **Servidor de Aplicação:** Onde os contratos inteligentes serão gerados e monitorados.
-- **Blockchain:** Rede para armazenar e executar os contratos de forma imutável.
+![Design de Arquitetura](https://github.com/user-attachments/assets/7fdd2542-0c0f-4382-a1c4-2debe4612350)
+
+O sistema será composto por estes componentes principais:
+- **Interface do Cliente:** Plataforma web para interação com os contratos.
+- **Aplicação Backend Django:** Processa as requisições e gerencia a lógica de negócios dos contratos.
+- **API de Integração com Blockchain:** Faz a integração entre Backend e a Blockchain.
+- **Blockchain Ethereum:** Onde os contratos inteligentes são implantados e executados.
+- **Banco de Dados PostgreSQL/MongoDB:** Armazena dados auxiliares e relacionados aos contratos.
 
 #### 3.2.2 Padrões de Arquitetura (A SER DESENVOLVIDO)
 
