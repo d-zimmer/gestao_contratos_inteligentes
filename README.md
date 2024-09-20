@@ -57,11 +57,8 @@ Os principais problemas a serem abordados são:
 5. **Assinar Contrato (RF5)**: O sistema deve permitir que os locatários assinem digitalmente o contrato de aluguel na blockchain.
 6. **Executar Contrato (RF6)**: O sistema deve garantir que os contratos sejam executados automaticamente, de acordo com os termos definidos (ex: pagamento do aluguel na data acordada).
 7. **Registrar Pagamentos (RF7)**: O sistema deve registrar automaticamente os pagamentos realizados pelos locatários e vinculá-los ao contrato inteligente.
-8. **Visualizar Histórico de Contratos (RF8)**: O sistema deve permitir que os usuários visualizem o histórico de contratos anteriores.
-9. **Consultar Contratos em Andamento (RF9)**: O sistema deve fornecer uma funcionalidade que permita consultar os contratos de aluguel em andamento.
-10. **Notificar Atrasos de Pagamento (RF10)**: O sistema deve notificar locadores e locatários em caso de atraso nos pagamentos automáticos.
-11. **Encerrar Contrato (RF11)**: O sistema deve permitir que contratos sejam encerrados automaticamente ou por decisão mútua das partes envolvidas.
-12. **Consulta de Disputas (RF12)**: O sistema deve permitir que os usuários consultem o status de disputas relacionadas a contratos.
+8. **Consultar Contratos (RF8)**: O sistema deve fornecer uma funcionalidade que permita consultar os contratos de aluguel em andamento.
+9. **Encerrar Contrato (RF9)**: O sistema deve permitir que contratos sejam encerrados automaticamente ou por decisão mútua das partes envolvidas.
 
 ### Requisitos Não-Funcionais (RNF):
 1. **Segurança (RNF1)**: O sistema deve garantir um acesso seguro aos usuários, utilizando autenticação por dois fatores (2FA).
@@ -93,6 +90,15 @@ O sistema será composto por estes componentes principais:
 - **Banco de Dados PostgreSQL/MongoDB:** Armazena dados auxiliares e relacionados aos contratos.
 
 #### 3.2.2 Modelos C4
+
+Os modelos C4 (Context, Containers, Components, Code) oferecem uma estrutura robusta para detalhar a arquitetura de um sistema em diferentes níveis de abstração.
+![image](https://github.com/user-attachments/assets/ce3a8eec-8c28-4bb7-884b-8bfca574d7b7)
+O diagrama de contexto do sistema de Gestão de Contratos Inteligentes, destacando os principais atores externos e suas interações com o sistema, são eles:
+
+- **Locador (Usuário):** Utiliza um navegador web para interagir com o sistema;
+- **Locatário (Usuário):** Utiliza um navegador web para interagir com o sistema;
+- **Sistema de Gestão de Contratos (Aplicação):** A aplicação de Gestão de Contratos é responsável por processar as requisições recebidas. Permite ao usuário, registrar assinar, consultar e visualizar contratos;
+- **Ambiente Blockchain Financeiros (Sistema):** o serviço de integração é responsável por obter informações públicas sobre as ações financeiras.
 
 ### 3.3 Stack Tecnológica
 
