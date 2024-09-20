@@ -76,10 +76,12 @@ Os principais problemas a serem abordados são:
 8. **Conformidade Legal (RNF8)**: O sistema deve ser desenvolvido de acordo com as leis de proteção de dados e regulação de contratos de cada jurisdição.
 
 
-#### 3.1.2 Representação dos Requisitos (A SER DESENVOLVIDO)
-- Diagrama de Casos de Uso (UML) 
+#### 3.1.2 Representação dos Requisitos
+- Diagrama de Casos de Uso (UML)
+![Design de Arquitetura (2)](https://github.com/user-attachments/assets/83346047-8b36-4058-bda5-798ba4c37906)
 
-### 3.2 Considerações de Design (A SER DESENVOLVIDO)
+
+### 3.2 Considerações de Design
 #### 3.2.1 Visão Inicial da Arquitetura
 ![Design de Arquitetura](https://github.com/user-attachments/assets/7fdd2542-0c0f-4382-a1c4-2debe4612350)
 
@@ -90,7 +92,8 @@ O sistema será composto por estes componentes principais:
 - **Blockchain Ethereum:** Onde os contratos inteligentes são implantados e executados.
 - **Banco de Dados PostgreSQL/MongoDB:** Armazena dados auxiliares e relacionados aos contratos.
 
-#### 3.2.2 Padrões de Arquitetura (A SER DESENVOLVIDO)
+#### 3.2.2 Padrões de Arquitetura
+
 
 #### 3.2.3 Modelos C4 (A SER DESENVOLVIDO)
 
