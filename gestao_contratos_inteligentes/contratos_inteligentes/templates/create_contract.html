@@ -1,0 +1,16 @@
+<form method="post">
+    {% csrf_token %}
+    <label for="landlord">Endereço do Locador:</label>
+    <input type="text" id="landlord" name="landlord">
+    
+    <label for="tenant">Endereço do Inquilino:</label>
+    <input type="text" id="tenant" name="tenant">
+
+    <label for="rent_amount">Valor do Aluguel:</label>
+    <input type="number" id="rent_amount" name="rent_amount">
+
+    <label for="deposit_amount">Valor do Depósito:</label>
+    <input type="number" id="deposit_amount" name="deposit_amount">
+
+    <button type="submit">Criar Contrato</button>
+</form>

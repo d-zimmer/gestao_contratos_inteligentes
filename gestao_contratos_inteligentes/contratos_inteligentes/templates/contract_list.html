@@ -1,0 +1,7 @@
+<h2>Lista de Contratos</h2>
+
+<ul>
+    {% for contract in contracts %}
+    <li>Locador: {{ contract.landlord }} | Inquilino: {{ contract.tenant }} | Endereço na Blockchain: {{ contract.contract_address }}</li>
+    {% endfor %}
+</ul>
