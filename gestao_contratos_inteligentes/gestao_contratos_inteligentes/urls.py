@@ -1,7 +1,7 @@
-from django.urls import path
-from . import views
+from django.contrib import admin
+from django.urls import path, include
 
 urlpatterns = [
-    path('create/', views.create_contract, name='create_contract'),
-    path('contracts/', views.contract_list, name='contract_list'),
+    path('admin/', admin.site.urls),
+    path('', include('contratos_inteligentes.urls')),  # Inclui as URLs do app
 ]

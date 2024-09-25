@@ -4,7 +4,7 @@ from web3 import Web3
 from dotenv import load_dotenv
 import os
 
-# Carrega as variáveis do .env
+# Carrega as variáveis do arquivo .env
 load_dotenv()
 
 # Conexão com a blockchain (Sepolia)
@@ -31,7 +31,7 @@ def create_contract(request):
         # Interação com a blockchain
         # ABI e endereço do contrato (coloque o ABI correto)
         contract_abi = [...]  # ABI gerado na compilação do contrato
-        contract_address = '0xEndereçoDoContratoNaBlockchain'  # Endereço do contrato
+        contract_address = '0xEndereçoDoContratoNaBlockchain'  # Endereço do contrato na blockchain
         contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
         # Preparar a transação para deploy do contrato
@@ -52,10 +52,15 @@ def create_contract(request):
         tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
         web3.eth.waitForTransactionReceipt(tx_hash)
 
-        # Salvar o endereço do contrato no banco de dados
-        rental_contract.contract_address = contract_address
-        rental_contract.save()
+        # Opcionalmente, exibir o hash da transação para feedback
+        print(f'Transação enviada com sucesso: {tx_hash.hex()}')
 
+        # Redirecionar para a lista de contratos após a criação
         return redirect('contract_list')
 
     return render(request, 'create_contract.html')
+
+# Função para listar os contratos existentes
+def contract_list(request):
+    contracts = RentalContract.objects.all()
+    return render(request, 'contract_list.html', {'contracts': contracts})
