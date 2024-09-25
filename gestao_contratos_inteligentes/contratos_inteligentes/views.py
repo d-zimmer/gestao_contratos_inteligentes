@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from .models import RentalContract
 from web3 import Web3
 from dotenv import load_dotenv
+from django.contrib import messages
 import os
 
 # Carrega as variáveis do arquivo .env
@@ -56,6 +57,7 @@ def create_contract(request):
         print(f'Transação enviada com sucesso: {tx_hash.hex()}')
 
         # Redirecionar para a lista de contratos após a criação
+        messages.success(request, 'Contrato criado com sucesso!')
         return redirect('contract_list')
 
     return render(request, 'create_contract.html')
