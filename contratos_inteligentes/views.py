@@ -3,6 +3,10 @@ from .models import RentalContract
 from web3 import Web3
 from dotenv import load_dotenv
 from django.contrib import messages
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from .models import RentalContract
+
 import os
 
 # Carrega as variáveis do arquivo .env
@@ -66,3 +70,34 @@ def create_contract(request):
 def contract_list(request):
     contracts = RentalContract.objects.all()
     return render(request, 'contract_list.html', {'contracts': contracts})
+
+# API para listar todos os contratos de aluguel
+@api_view(['GET'])
+def contract_list_api(request):
+    contracts = RentalContract.objects.all()
+    contracts_data = [{
+        "landlord": contract.landlord,
+        "tenant": contract.tenant,
+        "rent_amount": contract.rent_amount,
+        "deposit_amount": contract.deposit_amount,
+        "contract_address": contract.contract_address
+    } for contract in contracts]
+
+    return Response(contracts_data)
+
+@api_view(['POST'])  # Apenas POST é permitido aqui
+def create_contract_api(request):
+    landlord = request.data.get('landlord')
+    tenant = request.data.get('tenant')
+    rent_amount = request.data.get('rent_amount')
+    deposit_amount = request.data.get('deposit_amount')
+
+    # Cria o contrato e salva no banco de dados
+    contract = RentalContract.objects.create(
+        landlord=landlord,
+        tenant=tenant,
+        rent_amount=rent_amount,
+        deposit_amount=deposit_amount
+    )
+
+    return Response({"message": "Contrato criado com sucesso!"}, status=201)
