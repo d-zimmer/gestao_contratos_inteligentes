@@ -11,3 +11,5 @@ class RentalContract(models.Model):
     def __str__(self):
         return f"Contrato de {self.landlord} para {self.tenant}"
 
+    class Meta:
+        db_table = 'contratos'

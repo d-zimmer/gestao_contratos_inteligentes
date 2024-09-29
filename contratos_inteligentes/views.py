@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import RentalContract
 from web3 import Web3
+import json
 from dotenv import load_dotenv
 from django.contrib import messages
 from rest_framework.response import Response
@@ -9,67 +10,26 @@ from .models import RentalContract
 
 import os
 
-# Carrega as variáveis do arquivo .env
 load_dotenv()
-
-# Conexão com a blockchain (Sepolia)
-web3 = Web3(Web3.HTTPProvider('https://rpc.sepolia.org'))
 private_key = os.getenv("PRIVATE_KEY")
 
-# Função para criar o contrato de aluguel
-def create_contract(request):
-    if request.method == 'POST':
-        landlord = request.POST['landlord']
-        tenant = request.POST['tenant']
-        rent_amount = request.POST['rent_amount']
-        deposit_amount = request.POST['deposit_amount']
+# Conectar ao nó local do Hardhat
+web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
 
-        # Criar um contrato no banco de dados
-        rental_contract = RentalContract(
-            landlord=landlord,
-            tenant=tenant,
-            rent_amount=rent_amount,
-            deposit_amount=deposit_amount,
-        )
-        rental_contract.save()
+# Verificar se a conexão foi estabelecida
+if web3.isConnected():
+    print("Conectado à rede local do Hardhat")
+else:
+    print("Erro ao conectar")
+    
+# Definir o ABI e endereço do contrato após o deploy (substitua por seu ABI e endereço)
+with open('\scripts\RentalAgreementABI.json', 'r') as abi_file:
+    contract_abi = json.load(abi_file)
+    
+contract_address = "0x5fbdb2315678afecb367f032d93f642f64180aa3"
 
-        # Interação com a blockchain
-        # ABI e endereço do contrato (coloque o ABI correto)
-        contract_abi = [...]  # ABI gerado na compilação do contrato
-        contract_address = '0xEndereçoDoContratoNaBlockchain'  # Endereço do contrato na blockchain
-        contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-
-        # Preparar a transação para deploy do contrato
-        tx = contract.functions.createRentalAgreement(
-            Web3.toChecksumAddress(landlord),
-            Web3.toChecksumAddress(tenant),
-            int(rent_amount),
-            int(deposit_amount)
-        ).buildTransaction({
-            'chainId': 11155111,  # ID da Sepolia
-            'gas': 2000000,
-            'gasPrice': web3.toWei('20', 'gwei'),
-            'nonce': web3.eth.getTransactionCount(web3.eth.account.privateKeyToAccount(private_key).address)
-        })
-
-        # Assinar e enviar a transação
-        signed_tx = web3.eth.account.signTransaction(tx, private_key)
-        tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
-        web3.eth.waitForTransactionReceipt(tx_hash)
-
-        # Opcionalmente, exibir o hash da transação para feedback
-        print(f'Transação enviada com sucesso: {tx_hash.hex()}')
-
-        # Redirecionar para a lista de contratos após a criação
-        messages.success(request, 'Contrato criado com sucesso!')
-        return redirect('contract_list')
-
-    return render(request, 'create_contract.html')
-
-# Função para listar os contratos existentes
-def contract_list(request):
-    contracts = RentalContract.objects.all()
-    return render(request, 'contract_list.html', {'contracts': contracts})
+# Carregar o contrato
+contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
 # API para listar todos os contratos de aluguel
 @api_view(['GET'])
@@ -85,19 +45,49 @@ def contract_list_api(request):
 
     return Response(contracts_data)
 
-@api_view(['POST'])  # Apenas POST é permitido aqui
+@api_view(['POST'])
 def create_contract_api(request):
     landlord = request.data.get('landlord')
     tenant = request.data.get('tenant')
     rent_amount = request.data.get('rent_amount')
     deposit_amount = request.data.get('deposit_amount')
 
-    # Cria o contrato e salva no banco de dados
+    # Interagir com o contrato implantado
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+    tx_hash = contract.functions.createRentalAgreement(
+        Web3.toChecksumAddress(landlord),
+        Web3.toChecksumAddress(tenant),
+        int(rent_amount),
+        int(deposit_amount)
+    ).transact({'from': web3.eth.accounts[0]})
+
+    tx_receipt = web3.eth.waitForTransactionReceipt(tx_hash)  
+    contract_address = tx_receipt.contractAddress
+
+    # Criar o contrato no banco de dados
     contract = RentalContract.objects.create(
         landlord=landlord,
         tenant=tenant,
         rent_amount=rent_amount,
-        deposit_amount=deposit_amount
+        deposit_amount=deposit_amount,
+        contract_address=contract_address
     )
 
     return Response({"message": "Contrato criado com sucesso!"}, status=201)
+
+@api_view(['POST'])
+def pay_rent(request):
+    tenant_address = request.data.get('tenant_address')
+    rent_amount = web3.toWei(request.data.get('rent_amount'), 'ether')
+
+    # Enviar a transação para o contrato
+    tx_hash = contract.functions.payRent().transact({
+        'from': Web3.toChecksumAddress(tenant_address),
+        'value': rent_amount
+    })
+
+    # Esperar o recibo da transação
+    tx_receipt = web3.eth.waitForTransactionReceipt(tx_hash)
+
+    return Response({"message": "Aluguel pago com sucesso!", "tx_hash": tx_hash.hex()})
