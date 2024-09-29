@@ -6,9 +6,8 @@ async function main() {
   const RentalAgreement = await ethers.getContractFactory("RentalAgreement");
   const rentalAgreement = await RentalAgreement.deploy(1000, 500);  // Exemplo de parâmetros
 
-  await rentalAgreement.deployed();  // Certifique-se de que o contrato foi implantado
-
-  console.log("Contract deployed to:", rentalAgreement.address);  // Aqui acessa o endereço correto
+  await rentalAgreement.deployed();
+  console.log("Contract deployed to:", rentalAgreement.address);
 }
 
 main()

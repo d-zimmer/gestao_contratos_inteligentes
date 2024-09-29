@@ -4,11 +4,11 @@ require("@nomicfoundation/hardhat-toolbox");
 const privateKey = process.env.PRIVATE_KEY;
 
 module.exports = {
-  solidity: "0.8.27",  // Versão do Solidity que você está usando
+  solidity: "0.8.27",
   networks: {
-    sepolia: {
-      url: "https://rpc.sepolia.org",  // URL da rede de teste Sepolia
-      accounts: [privateKey]  // Substitua YOUR_PRIVATE_KEY pela sua chave privada MetaMask
+    localhost: {  // Rede local do Hardhat
+      url: "http://127.0.0.1:8545",
+      accounts: [privateKey]  // Usar a chave privada configurada no .env
     }
   }
 };
