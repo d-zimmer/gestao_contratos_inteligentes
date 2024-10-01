@@ -7,6 +7,8 @@ contract RentalAgreement {
     uint256 public rentAmount;
     uint256 public deposit;
     bool public isTerminated;
+    bool public landlordSigned;
+    bool public tenantSigned;
     
     event RentPaid(address indexed tenant, uint256 amount);
     event DepositPaid(address indexed tenant, uint256 amount);
@@ -18,10 +20,9 @@ contract RentalAgreement {
         deposit = _deposit;
         isTerminated = false;
     }
-
     // Função para criar um contrato de aluguel
     function createRentalAgreement(address _landlord, address _tenant, uint256 _rentAmount, uint256 _deposit) public {
-        require(msg.sender == landlord, "Apenas o locador pode criar o contrato.");
+        require(msg.sender == landlord, "apenas o locador pode criar o contrato.");
         landlord = _landlord;
         tenant = _tenant;
         rentAmount = _rentAmount;
@@ -31,7 +32,7 @@ contract RentalAgreement {
 
     // Função para pagar o aluguel
     function payRent() public payable {
-        require(msg.sender == tenant, "Apenas o inquilino pode pagar o aluguel.");
+        require(msg.sender == tenant, "apenas o inquilino pode pagar o aluguel.");
         require(msg.value == rentAmount, "Valor do aluguel incorreto.");
         require(!isTerminated, "O contrato foi encerrado.");
         
@@ -41,8 +42,8 @@ contract RentalAgreement {
 
     // Função para pagar o depósito
     function payDeposit() public payable {
-        require(msg.sender == tenant, "Apenas o inquilino pode pagar o depósito.");
-        require(msg.value == deposit, "Valor do depósito incorreto.");
+        require(msg.sender == tenant, "apenas o inquilino pode pagar o deposito.");
+        require(msg.value == deposit, "Valor do deposito incorreto.");
         require(!isTerminated, "O contrato foi encerrado.");
         
         payable(landlord).transfer(msg.value);
@@ -51,11 +52,21 @@ contract RentalAgreement {
 
     // Função para encerrar o contrato
     function terminateContract() public {
-        require(msg.sender == landlord, "Apenas o locador pode encerrar o contrato.");
-        require(!isTerminated, "O contrato já foi encerrado.");
+        require(msg.sender == landlord, "apenas o locador pode encerrar o contrato.");
+        require(!isTerminated, "O contrato ja foi encerrado.");
         
         isTerminated = true;
         emit ContractTerminated(landlord, tenant);
+    }
+
+    function signAgreement() public {
+        if (msg.sender == landlord) {
+            landlordSigned = true;
+        } else if (msg.sender == tenant) {
+            tenantSigned = true;
+        } else {
+            revert("Only landlord or tenant can sign the agreement.");
+        }
     }
 
     // Função para verificar se o contrato está ativo

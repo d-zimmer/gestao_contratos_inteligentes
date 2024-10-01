@@ -6,6 +6,17 @@ __pycache__/
 # C extensions
 *.so
 
+# Python
+venv/
+*.pyc
+
+# Node.js/Hardhat
+node_modules/
+
+# Hardhat build files
+artifacts/
+cache/
+
 # Distribution / packaging
 .Python
 build/
@@ -151,6 +162,8 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+hardhat/
+
 # Cython debug symbols
 cython_debug/
 
@@ -166,7 +179,7 @@ node_modules
 
 # Hardhat files
 /cache
-/artifacts
+/artiacts
 
 # TypeChain files
 /typechain
