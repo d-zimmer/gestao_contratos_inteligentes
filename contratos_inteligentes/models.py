@@ -3,12 +3,12 @@ from django.utils import timezone
 
 # Modelo para armazenar dados de um contrato de aluguel
 class RentalContract(models.Model):
-    landlord = models.CharField(max_length=42)  # Endereço do locador
-    tenant = models.CharField(max_length=42)    # Endereço do locatário
+    landlord = models.CharField(max_length=42)
+    tenant = models.CharField(max_length=42)
     rent_amount = models.DecimalField(max_digits=10, decimal_places=2)
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    contract_address = models.CharField(max_length=42, blank=True)  # Endereço do contrato na blockchain
-    created_at = models.DateTimeField(default=timezone.now)
+    contract_address = models.CharField(max_length=42)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Contrato de {self.landlord} para {self.tenant}"

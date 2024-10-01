@@ -14,7 +14,7 @@ web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:7545"))
 
 # Verificar se a conexão foi estabelecida
 if web3.is_connected():
-    print("Conectado à rede local do Hardhat")
+    print("Conectado à rede local Ganache")
 else:
     print("Erro ao conectar")
 
@@ -71,14 +71,15 @@ def create_contract_api(request):
 
 @api_view(['GET'])
 def contract_list_api(request):
-    contracts = RentalContract.objects.all().order_by('-created_at')  # Ordena pela data de criação
+    contracts = RentalContract.objects.all()
     contracts_data = [{
+        "id": contract.id,
         "landlord": contract.landlord,
         "tenant": contract.tenant,
         "rent_amount": contract.rent_amount,
         "deposit_amount": contract.deposit_amount,
         "contract_address": contract.contract_address,
-        "created_at": contract.created_at  # Inclui a data de criação
+        "created_at": contract.created_at  # Adicionando a data
     } for contract in contracts]
 
     return Response(contracts_data)
@@ -120,7 +121,7 @@ def sign_contract_api(request):
 
     account_to_sign = web3.eth.account.from_key(private_key)
 
-    tx = contract.functions.signAgreement().buildTransaction({
+    tx = contract.functions.signAgreement().build_transaction({
         'from': account_to_sign.address,
         'nonce': web3.eth.get_transaction_count(account_to_sign.address),
         'gas': 2000000,
@@ -140,7 +141,7 @@ def execute_contract_api(request):
 
     account = Account.from_key(private_key)
 
-    tx = contract.functions.activateContract().buildTransaction({
+    tx = contract.functions.activateContract().build_transaction({
         'from': account.address,
         'nonce': web3.eth.get_transaction_count(account.address),
         'gas': 2000000,
@@ -167,7 +168,7 @@ def register_payment_api(request):
     elif payment_type == "Depósito":
         tx_function = contract.functions.payDeposit()
 
-    tx = tx_function.buildTransaction({
+    tx = tx_function.build_transaction({
         'from': account_to_pay.address,
         'value': web3.to_wei(amount, 'ether'),
         'nonce': web3.eth.get_transaction_count(account_to_pay.address),
@@ -189,7 +190,7 @@ def terminate_contract_api(request):
     account_to_terminate = web3.eth.account.from_key(private_key)
 
     # Função para encerrar o contrato
-    tx = contract.functions.terminateContract().buildTransaction({
+    tx = contract.functions.terminateContract().build_transaction({
         'from': account_to_terminate.address,
         'nonce': web3.eth.getTransactionCount(account_to_terminate.address),
         'gas': 2000000,
