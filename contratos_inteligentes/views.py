@@ -35,39 +35,58 @@ def create_contract_api(request):
     deposit_amount = request.data.get('deposit_amount')
     private_key = request.data.get('private_key')
 
-    account = Account.from_key(private_key)
+    # Carregar a conta a partir da chave privada
+    account = web3.eth.account.from_key(private_key)
 
     try:
+        # Validar endereços
         landlord = Web3.to_checksum_address(landlord)
         tenant = Web3.to_checksum_address(tenant)
     except ValueError:
         return Response({"error": "Endereço inválido"}, status=400)
+    
+    # Carregar o ABI e o bytecode do contrato compilado
+    with open(os.path.join('build', 'RentalAgreementABI.json'), 'r') as abi_file:
+        contract_abi = json.load(abi_file)
 
-    tx = contract.functions.createRentalAgreement(
-        landlord,
-        tenant,
-        int(rent_amount),
-        int(deposit_amount)
-    ).build_transaction({
+    with open(os.path.join('build', 'compiled_contract.json'), 'r') as bytecode_file:
+        compiled_contract = json.load(bytecode_file)
+        bytecode = compiled_contract["contracts"]["RentalAgreement.sol"]["RentalAgreement"]["evm"]["bytecode"]["object"]
+
+    # Fazer o deploy de um novo contrato inteligente para cada novo contrato de aluguel
+    contract = web3.eth.contract(abi=contract_abi, bytecode=bytecode)
+
+    # Criar transação para deploy de um novo contrato
+    transaction = contract.constructor(int(rent_amount), int(deposit_amount)).build_transaction({
         'from': account.address,
         'nonce': web3.eth.get_transaction_count(account.address),
         'gas': 2000000,
         'gasPrice': web3.to_wei('20', 'gwei')
     })
 
-    signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+    # Assinar e enviar a transação
+    signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
     tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-    web3.eth.wait_for_transaction_receipt(tx_hash)
 
+    # Esperar pelo recibo do deploy do contrato
+    tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+    new_contract_address = tx_receipt.contractAddress  # Endereço do novo contrato
+
+    # Salvar no banco de dados o novo contrato
     RentalContract.objects.create(
         landlord=landlord,
         tenant=tenant,
         rent_amount=rent_amount,
         deposit_amount=deposit_amount,
-        contract_address=contract_address
+        contract_address=new_contract_address  # Agora cada contrato tem um novo endereço
     )
 
-    return Response({"message": "Contrato criado com sucesso!", "tx_hash": tx_hash.hex()}, status=201)
+    return Response({
+        "message": "Contrato criado com sucesso!",
+        "tx_hash": tx_hash.hex(),
+        "contract_address": new_contract_address
+    }, status=201)
+
 
 @api_view(['GET'])
 def contract_list_api(request):
@@ -198,7 +217,7 @@ def terminate_contract_api(request):
     })
 
     signed_tx = web3.eth.account.signTransaction(tx, private_key)
-    tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+    tx_hash = web3.eth.sendRawTransaction(signed_tx.raw_transaction)
     receipt = web3.eth.waitForTransactionReceipt(tx_hash)
 
     # Registrar o encerramento no banco de dados

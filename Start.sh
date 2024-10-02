@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Ativar o ambiente virtual
+echo "Ativante o ambiente virtual..."
 source venv/Scripts/activate
 
 # Certifique-se de que o Ganache GUI está em execução manualmente antes de iniciar o Django e o Streamlit

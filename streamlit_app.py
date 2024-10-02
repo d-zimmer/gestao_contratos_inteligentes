@@ -15,7 +15,13 @@ def fetch_contracts():
 
 # Menu de navegação para páginas diferentes
 st.sidebar.title("Gestão de Contratos Inteligentes")
-page = st.sidebar.radio("Ir para", ["Criar Contrato", "Assinar Contrato", "Executar Contrato", "Registrar Pagamento", "Visualizar Contratos", "Encerrar Contrato"])
+page = st.sidebar.selectbox("Selecione a página",
+                        ["Criar Contrato",
+                         "Assinar Contrato",
+                         "Executar Contrato",
+                         "Registrar Pagamento",
+                         "Visualizar Contratos",
+                         "Encerrar Contrato"])
 
 if page == "Criar Contrato":
     st.title("Criar Novo Contrato")
