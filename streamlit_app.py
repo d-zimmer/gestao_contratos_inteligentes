@@ -1,17 +1,39 @@
-import streamlit as st
-import requests
-import web3
+import streamlit as st # type:ignore
+import requests # type:ignore
+import web3 # type:ignore
+import os
 
-# Defina o URL da API Django
-DJANGO_API_URL = "http://localhost:8000/"
+from dotenv import load_dotenv # type:ignore
+
+
+load_dotenv()
+
+DJANGO_API_URL = os.getenv("DJANGO_API_URL")
+
+def api_post(endpoint, data):
+    try:
+        response = requests.post(f"{DJANGO_API_URL}{endpoint}", json=data)
+        if response.status_code == 200 or response.status_code == 201:
+            return response.json(), True
+        else:
+            return response.text, False
+    except requests.ConnectionError:
+        return "Erro de conexão com a API.", False
+
+# Função para fazer uma requisição GET à API
+def api_get(endpoint):
+    try:
+        response = requests.get(f"{DJANGO_API_URL}{endpoint}")
+        if response.status_code == 200:
+            return response.json(), True
+        else:
+            return response.text, False
+    except requests.ConnectionError:
+        return "Erro de conexão com a API.", False
 
 # Função para buscar contratos da API Django
 def fetch_contracts():
-    response = requests.get(f"{DJANGO_API_URL}api/contracts/")
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return []
+    return api_get("api/contracts/")[0]
 
 # Menu de navegação para páginas diferentes
 st.sidebar.title("Gestão de Contratos Inteligentes")
@@ -23,6 +45,7 @@ page = st.sidebar.selectbox("Selecione a página",
                          "Visualizar Contratos",
                          "Encerrar Contrato"])
 
+# Página de Criar Contrato
 if page == "Criar Contrato":
     st.title("Criar Novo Contrato")
     
@@ -32,7 +55,6 @@ if page == "Criar Contrato":
     deposit_amount = st.number_input("Valor do Depósito", min_value=0.0, step=0.01)
     private_key = st.text_input("Chave Privada do Locador", type="password")
 
-    # Botão para criar contrato
     if st.button("Criar Contrato"):
         contract_data = {
             "landlord": landlord,
@@ -41,56 +63,54 @@ if page == "Criar Contrato":
             "deposit_amount": deposit_amount,
             "private_key": private_key
         }
-        
-        landlord = web3.Web3.to_checksum_address(landlord)
-        tenant = web3.Web3.to_checksum_address(tenant)
-        
-        st.write("Enviando dados:", contract_data)
+        with st.spinner("Processando..."):
+            result, success = api_post("api/create_contract/", contract_data)
+            if success:
+                st.success("Contrato criado com sucesso!")
+            else:
+                st.error(f"Erro ao criar contrato: {result}")
 
-        response = requests.post(f"{DJANGO_API_URL}/api/create/", json=contract_data)
-
-        if response.status_code == 201:
-            st.success("Contrato criado com sucesso!")
-        else:
-            st.error(f"Erro ao criar contrato: {response.status_code} - {response.text}")
-
+# Página de Assinar Contrato
 if page == "Assinar Contrato":
     st.title("Assinar Contrato Inteligente")
     
-    # Input para chave privada e ID do contrato
     contract_id = st.text_input("ID do Contrato")
     private_key = st.text_input("Chave Privada", type="password")
+    user_type = st.selectbox("Tipo de Usuário", ["Locador", "Inquilino"])  # Para indicar quem está assinando
     
     if st.button("Assinar Contrato"):
-        # Lógica para assinar o contrato (via backend Django)
         signature_data = {
             "contract_id": contract_id,
-            "private_key": private_key
+            "private_key": private_key,
+            "user_type": user_type.lower()
         }
-        response = requests.post(f"{DJANGO_API_URL}api/sign_contract/", json=signature_data)
-        
-        if response.status_code == 200:
-            st.success("Contrato assinado com sucesso!")
-        else:
-            st.error(f"Erro ao assinar contrato: {response.status_code} - {response.text}")
+        with st.spinner("Processando..."):
+            result, success = api_post("api/sign_contract/", signature_data)
+            if success:
+                st.success("Contrato assinado com sucesso!")
+            else:
+                st.error(f"Erro ao assinar contrato: {result}")
 
+# Página de Executar Contrato
 if page == "Executar Contrato":
     st.title("Executar Contrato Inteligente")
     
     contract_id = st.text_input("ID do Contrato")
+    private_key = st.text_input("Chave Privada", type="password")
     
     if st.button("Executar Contrato"):
-        # Lógica para executar o contrato na blockchain
         execution_data = {
-            "contract_id": contract_id
+            "contract_id": contract_id,
+            "private_key": private_key
         }
-        response = requests.post(f"{DJANGO_API_URL}api/execute_contract/", json=execution_data)
-        
-        if response.status_code == 200:
-            st.success("Contrato executado com sucesso!")
-        else:
-            st.error(f"Erro ao executar contrato: {response.status_code} - {response.text}")
+        with st.spinner("Processando..."):
+            result, success = api_post("api/execute_contract/", execution_data)
+            if success:
+                st.success("Contrato executado com sucesso!")
+            else:
+                st.error(f"Erro ao executar contrato: {result}")
 
+# Página de Registrar Pagamento
 if page == "Registrar Pagamento":
     st.title("Registrar Pagamento")
     
@@ -100,55 +120,52 @@ if page == "Registrar Pagamento":
     amount = st.number_input("Valor do Pagamento", min_value=0.0, step=0.01)
     
     if st.button("Registrar Pagamento"):
-        # Lógica para registrar o pagamento
         payment_data = {
             "contract_id": contract_id,
             "private_key": private_key,
             "payment_type": payment_type,
             "amount": amount
         }
-        response = requests.post(f"{DJANGO_API_URL}api/register_payment/", json=payment_data)
-        
-        if response.status_code == 200:
-            st.success(f"Pagamento de {payment_type} registrado com sucesso!")
-        else:
-            st.error(f"Erro ao registrar pagamento: {response.status_code} - {response.text}")
+        with st.spinner("Processando..."):
+            result, success = api_post("api/register_payment/", payment_data)
+            if success:
+                st.success(f"Pagamento de {payment_type} registrado com sucesso!")
+            else:
+                st.error(f"Erro ao registrar pagamento: {result}")
 
+# Página de Visualizar Contratos
 if page == "Visualizar Contratos":
     st.title("Lista de Contratos de Aluguel")
-    
-    # Buscar contratos da API
-    response = requests.get(f"{DJANGO_API_URL}/api/contracts/")
-    if response.status_code == 200:
-        contracts = response.json()
-        
-        if contracts:
-            for contract in contracts:
-                st.subheader(f"Contrato de {contract['landlord']} para {contract['tenant']}")
-                st.write(f"Valor do Aluguel: {contract['rent_amount']}")
-                st.write(f"Valor do Depósito: {contract['deposit_amount']}")
-                st.write(f"Endereço do Contrato na Blockchain: {contract['contract_address']}")
-                st.write(f"Data de Criação: {contract['created_at']}")
-                
-                # Exibir pagamentos relacionados
-                response_payments = requests.get(f"{DJANGO_API_URL}/api/payments/{contract['id']}/")
-                if response_payments.status_code == 200:
-                    payments = response_payments.json()
-                    for payment in payments:
-                        st.write(f"Pagamento: {payment['payment_type']} de {payment['amount']} em {payment['payment_date']}")
-                
-                # Verificar encerramento
-                response_termination = requests.get(f"{DJANGO_API_URL}/api/termination/{contract['id']}/")
-                if response_termination.status_code == 200:
-                    termination = response_termination.json()
-                    st.write(f"Contrato Encerrado em: {termination['termination_date']} por {termination['terminated_by']}")
-                
-                st.markdown("---")
-        else:
-            st.write("Nenhum contrato encontrado.")
-    else:
-        st.error("Erro ao carregar contratos.")
 
+    contracts = fetch_contracts()
+
+    if contracts:
+        for contract in contracts:
+            st.markdown(f"""
+            **Contrato de {contract['landlord']} para {contract['tenant']}**  
+            - Valor do Aluguel: {contract['rent_amount']}  
+            - Valor do Depósito: {contract['deposit_amount']}  
+            - Endereço do Contrato: {contract['contract_address']}  
+            - Data de Criação: {contract['created_at']}
+            """)
+            st.markdown("---")
+
+            # Exibir pagamentos relacionados
+            payments, success = api_get(f"api/payments/{contract['id']}/")
+            if success:
+                for payment in payments:
+                    st.write(f"Pagamento: {payment['payment_type']} de {payment['amount']} em {payment['payment_date']}")
+
+            # Verificar encerramento
+            termination, success = api_get(f"api/termination/{contract['id']}/")
+            if success:
+                st.write(f"Contrato Encerrado em: {termination['termination_date']} por {termination['terminated_by']}")
+            
+            st.markdown("---")
+    else:
+        st.write("Nenhum contrato encontrado.")
+
+# Página de Encerrar Contrato
 if page == "Encerrar Contrato":
     st.title("Encerrar Contrato Inteligente")
     
@@ -156,14 +173,14 @@ if page == "Encerrar Contrato":
     private_key = st.text_input("Chave Privada", type="password")
     
     if st.button("Encerrar Contrato"):
-        # Lógica para encerrar o contrato
         termination_data = {
             "contract_id": contract_id,
             "private_key": private_key
         }
-        response = requests.post(f"{DJANGO_API_URL}api/terminate/", json=termination_data)
-        
-        if response.status_code == 200:
-            st.success("Contrato encerrado com sucesso!")
-        else:
-            st.error(f"Erro ao encerrar contrato: {response.status_code} - {response.text}")
+
+        with st.spinner("Processando..."):
+            result, success = api_post("api/terminate_contract/", termination_data)
+            if success:
+                st.success("Contrato encerrado com sucesso!")
+            else:
+                st.error(f"Erro ao encerrar contrato: {result}")

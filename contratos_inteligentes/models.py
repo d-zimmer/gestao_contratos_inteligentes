@@ -1,6 +1,6 @@
-from django.db import models
-from django.utils import timezone
-from django.core.exceptions import ValidationError
+from django.db import models # type: ignore
+from django.utils import timezone # type: ignore
+from django.core.exceptions import ValidationError # type: ignore
 
 STATUS_CHOICES = [
     ('pending', 'Pendente'),

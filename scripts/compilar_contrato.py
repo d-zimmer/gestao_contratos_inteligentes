@@ -1,6 +1,6 @@
 import json
 import os
-from solcx import compile_standard, install_solc
+from solcx import compile_standard, install_solc # type: ignore
 
 # Instalar a versão do compilador Solidity
 install_solc("0.8.18")
