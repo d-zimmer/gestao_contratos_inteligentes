@@ -1,24 +1,22 @@
-from django.shortcuts import render, redirect, get_object_or_404 # type: ignore
-from django.http import JsonResponse # type: ignore
-from web3 import Web3, Account # type: ignore
-from dotenv import load_dotenv # type: ignore
-from rest_framework.response import Response # type: ignore
-from rest_framework.decorators import api_view # type: ignore
-from .models import RentalContract, User
-
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from web3 import Web3, Account
+from .models import RentalContract, Payment, ContractTermination, ContractEvent
+from django.utils import timezone 
 import os
 import json
 
+# Função para carregar o ABI e bytecode do contrato inteligente
 def load_contract_data():
     with open(os.path.join('build', 'RentalAgreementABI.json'), 'r') as abi_file:
         contract_abi = json.load(abi_file)
-
     with open(os.path.join('build', 'compiled_contract.json'), 'r') as bytecode_file:
         compiled_contract = json.load(bytecode_file)
         bytecode = compiled_contract["contracts"]["RentalAgreement.sol"]["RentalAgreement"]["evm"]["bytecode"]["object"]
-
     return contract_abi, bytecode
 
+# Função para verificar a conexão com o nó Ethereum
 def check_connection():
     if not web3.is_connected():
         raise Exception("Não conectado à rede Ethereum. Verifique sua conexão.")
@@ -31,21 +29,37 @@ if web3.is_connected():
 else:
     print("Erro ao conectar")
 
-# Definir o ABI e endereço do contrato após o deploy
+# Definir o ABI e o endereço do contrato
 with open(os.path.join('build', 'RentalAgreementABI.json'), 'r') as abi_file:
     contract_abi = json.load(abi_file)
 
 contract_address = Web3.to_checksum_address("0x5fbdb2315678afecb367f032d93f642f64180aa3")
 
-# Carregar o contrato
-contract = web3.eth.contract(address=contract_address, abi=contract_abi) 
+# Carregar o contrato inteligente
+contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
+# View para listar todos os contratos
+@api_view(['GET'])
+def contract_list_api(request):
+    contracts = RentalContract.objects.all()
+    contracts_data = [{
+        "id": contract.id,
+        "landlord": contract.landlord,
+        "tenant": contract.tenant,
+        "rent_amount": contract.rent_amount,
+        "deposit_amount": contract.deposit_amount,
+        "contract_address": contract.contract_address,
+        "created_at": contract.created_at
+    } for contract in contracts]
+    return Response(contracts_data)
+
+# View para criar um novo contrato
 @api_view(['POST'])
 def create_contract_api(request):
     try:
         check_connection()
     except Exception as e:
-        return Response({"error": "Falha na conexão com a rede Ethereum: " + str(e)}, status=500)  # Retorna a mensagem de erro
+        return Response({"error": "Falha na conexão com a rede Ethereum: " + str(e)}, status=500)
 
     landlord = request.data.get('landlord')
     tenant = request.data.get('tenant')
@@ -56,20 +70,16 @@ def create_contract_api(request):
     if not rent_amount or not deposit_amount or int(rent_amount) <= 0 or int(deposit_amount) <= 0:
         return Response({"error": "Valores de aluguel ou depósito inválidos"}, status=400)
 
-    # Carregar a conta a partir da chave privada
     account = web3.eth.account.from_key(private_key)
 
     try:
-        # Validar endereços
         landlord = Web3.to_checksum_address(landlord)
         tenant = Web3.to_checksum_address(tenant)
     except ValueError:
         return Response({"error": "Endereço inválido"}, status=400)
 
-    # Carregar ABI e bytecode através da função auxiliar
     contract_abi, bytecode = load_contract_data()
 
-    # Fazer o deploy de um novo contrato inteligente para cada novo contrato de aluguel
     contract = web3.eth.contract(abi=contract_abi, bytecode=bytecode)
 
     try:
@@ -80,15 +90,12 @@ def create_contract_api(request):
             'gasPrice': web3.to_wei('20', 'gwei')
         })
 
-        # Assinar e enviar a transação
         signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
         tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
-        # Esperar pelo recibo do deploy do contrato
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-        new_contract_address = tx_receipt.contractAddress  # Endereço do novo contrato
+        new_contract_address = tx_receipt.contractAddress
 
-        # Salvar no banco de dados o novo contrato, inicializando o status como 'pending'
         RentalContract.objects.create(
             landlord=landlord,
             tenant=tenant,
@@ -107,46 +114,28 @@ def create_contract_api(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
-@api_view(['GET'])
-def contract_list_api(request):
-    contracts = RentalContract.objects.all()
-    contracts_data = [{
-        "id": contract.id,
-        "landlord": contract.landlord,
-        "tenant": contract.tenant,
-        "rent_amount": contract.rent_amount,
-        "deposit_amount": contract.deposit_amount,
-        "contract_address": contract.contract_address,
-        "created_at": contract.created_at  # Adicionando a data
-    } for contract in contracts]
-
-    return Response(contracts_data)
-
+# View para pagar aluguel
 @api_view(['POST'])
-def pay_rent_api(request):
+def pay_rent_api(request, contract_id):
     try:
-        check_connection()  # Verifica a conexão antes de processar a transação
+        check_connection()
         
+        contract = get_object_or_404(RentalContract, id=contract_id)
         tenant_address = request.data.get('tenant_address')
         rent_amount = web3.toWei(request.data.get('rent_amount'), 'ether')
-        private_key = request.data.get('private_key')
 
         if not Web3.is_address(tenant_address):
             return Response({"error": "Endereço do inquilino inválido"}, status=400)
         
         tenant_address = Web3.to_checksum_address(tenant_address)
 
-        # Enviar a transação para o contrato
         tx_hash = contract.functions.payRent().transact({
             'from': tenant_address,
             'value': rent_amount
         })
 
-        # Esperar o recibo da transação
         tx_receipt = web3.eth.waitForTransactionReceipt(tx_hash)
 
-        # Registrar o pagamento no banco de dados
-        contract = get_object_or_404(RentalContract, tenant=tenant_address)
         Payment.objects.create(
             contract=contract,
             amount=request.data.get('rent_amount'),
@@ -161,52 +150,86 @@ def pay_rent_api(request):
         return Response({"error": str(e)}, status=500)
 
 @api_view(['POST'])
-def sign_contract_api(request):
-    contract_id = request.data.get('contract_id')
-    private_key = request.data.get('private_key')
-    user_type = request.data.get('user_type')  # landlord ou tenant
-
+def sign_contract_api(request, contract_id):
+    # Busca o contrato pelo ID
     contract = get_object_or_404(RentalContract, id=contract_id)
+    private_key = request.data.get('private_key')
+    user_type = request.data.get('user_type')
+
+    # Obter o endereço da conta que está assinando
     account_to_sign = web3.eth.account.from_key(private_key)
 
-    # Verificar quem está assinando
+    # Carregar o contrato inteligente da blockchain usando o endereço do contrato
+    blockchain_contract = web3.eth.contract(address=contract.contract_address, abi=contract_abi)
+
+    # Verificar quem está assinando (locador ou inquilino) e atualizar a assinatura
     if user_type == 'landlord':
         contract.landlord_signature = account_to_sign.address
+        print(f"Locador assinou o contrato. Endereço da assinatura: {contract.landlord_signature}")
     elif user_type == 'tenant':
         contract.tenant_signature = account_to_sign.address
+        print(f"Inquilino assinou o contrato. Endereço da assinatura: {contract.tenant_signature}")
+    else:
+        return Response({"error": "Tipo de usuário inválido."}, status=400)
 
     # Verificar se ambas as assinaturas foram feitas
     if contract.is_fully_signed():
-        contract.status = 'active'  # Mudar status para ativo se ambas as partes assinaram
+        contract.status = 'active'
+        print(f"Contrato {contract_id} foi completamente assinado. Status atualizado para 'ativo'.")
 
-    contract.save()
+    # Registrar o estado do contrato antes de salvar
+    print(f"Estado do contrato antes de salvar: Locador: {contract.landlord_signature}, Inquilino: {contract.tenant_signature}, Status: {contract.status}")
 
-    # Realizar a transação na blockchain
-    tx = contract.functions.signAgreement().build_transaction({
-        'from': account_to_sign.address,
-        'nonce': web3.eth.get_transaction_count(account_to_sign.address),
-        'gas': 2000000,
-        'gasPrice': web3.to_wei('20', 'gwei')
-    })
+    try:
+        # Salvar o contrato com as assinaturas no banco de dados
+        contract.save()
 
-    signed_tx = web3.eth.account.sign_transaction(tx, private_key)
-    tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-    web3.eth.wait_for_transaction_receipt(tx_hash)
+        # Registrar no log após salvar
+        print(f"Contrato {contract_id} salvo no banco de dados com as assinaturas.")
 
-    return Response({"message": "Contrato assinado!", "tx_hash": tx_hash.hex(), "status": contract.status}, status=200)
+        # Realizar a transação na blockchain para assinar o contrato
+        tx = blockchain_contract.functions.signAgreement().build_transaction({
+            'from': account_to_sign.address,
+            'nonce': web3.eth.get_transaction_count(account_to_sign.address),
+            'gas': 2000000,
+            'gasPrice': web3.to_wei('20', 'gwei')
+        })
 
+        signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        web3.eth.wait_for_transaction_receipt(tx_hash)
+
+        # Registrar o evento da transação
+        ContractEvent.objects.create(
+            contract=contract,
+            event_type='sign',
+            event_data={'tx_hash': tx_hash.hex()},
+            timestamp=timezone.now()
+        )
+
+        # Retornar sucesso
+        return Response({
+            "message": "Contrato assinado com sucesso!",
+            "tx_hash": tx_hash.hex(),
+            "status": contract.status
+        }, status=200)
+    except Exception as e:
+        print(f"Erro ao salvar ou processar a assinatura: {str(e)}")
+        return Response({"error": str(e)}, status=500)
+
+# View para executar contrato
 @api_view(['POST'])
-def execute_contract_api(request):
+def execute_contract_api(request, contract_id):
     try:
         check_connection()
-        contract_id = request.data.get('contract_id')
+        contract = get_object_or_404(RentalContract, id=contract_id)
         private_key = request.data.get('private_key')
 
         account = Account.from_key(private_key)
 
         tx = contract.functions.activateContract().build_transaction({
             'from': account.address,
-            'nonce': web3.eth.get_transaction_count(account.address),  # Sempre verificar conexão antes
+            'nonce': web3.eth.get_transaction_count(account.address),
             'gas': 2000000,
             'gasPrice': web3.to_wei('20', 'gwei')
         })
@@ -220,9 +243,10 @@ def execute_contract_api(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
+# View para registrar pagamento
 @api_view(['POST'])
-def register_payment_api(request):
-    contract_id = request.data.get('contract_id')
+def register_payment_api(request, contract_id):
+    contract = get_object_or_404(RentalContract, id=contract_id)
     private_key = request.data.get('private_key')
     payment_type = request.data.get('payment_type')
     amount = request.data.get('amount')
@@ -248,17 +272,15 @@ def register_payment_api(request):
 
     return Response({"message": f"{payment_type} registrado com sucesso!", "tx_hash": tx_hash.hex()}, status=200)
 
+# View para encerrar contrato
 @api_view(['POST'])
-def terminate_contract_api(request):
-    contract_id = request.data.get('contract_id')
+def terminate_contract_api(request, contract_id):
+    contract = get_object_or_404(RentalContract, id=contract_id)
     private_key = request.data.get('private_key')
 
     account_to_terminate = web3.eth.account.from_key(private_key)
 
-    contract = get_object_or_404(RentalContract, id=contract_id)
-
     try:
-        # Função para encerrar o contrato
         tx = contract.functions.terminateContract().build_transaction({
             'from': account_to_terminate.address,
             'nonce': web3.eth.get_transaction_count(account_to_terminate.address),
@@ -270,7 +292,6 @@ def terminate_contract_api(request):
         tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-        # Registrar o encerramento no banco de dados
         ContractTermination.objects.create(
             contract=contract,
             terminated_by=account_to_terminate.address,
@@ -280,7 +301,7 @@ def terminate_contract_api(request):
         contract.status = 'terminated'
         contract.save()
 
-        return Response({"message": "Contrato Encerrado com sucesso!", "tx_hash": tx_hash.hex()}, status=200)
+        return Response({"message": "Contrato Encerrado com sucesso!", "tx_hash": tx_hash.hex()})
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)

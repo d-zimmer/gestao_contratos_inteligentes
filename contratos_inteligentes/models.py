@@ -81,7 +81,10 @@ class ContractEvent(models.Model):
     contract = models.ForeignKey(RentalContract, on_delete=models.CASCADE, related_name='events')
     event_type = models.CharField(max_length=50)  # Ex: 'created', 'signed', 'terminated', etc.
     event_data = models.JSONField()  # Informações adicionais do evento, ex: hash da transação
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Evento {self.event_type} no contrato {self.contract.id} em {self.timestamp}"
     
     class Meta:
         db_table = 'eventos_contrato'

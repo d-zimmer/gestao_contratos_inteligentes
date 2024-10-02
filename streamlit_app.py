@@ -1,10 +1,9 @@
-import streamlit as st # type:ignore
-import requests # type:ignore
-import web3 # type:ignore
+import streamlit as st
+import requests
+import web3
 import os
 
-from dotenv import load_dotenv # type:ignore
-
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -20,7 +19,6 @@ def api_post(endpoint, data):
     except requests.ConnectionError:
         return "Erro de conexão com a API.", False
 
-# Função para fazer uma requisição GET à API
 def api_get(endpoint):
     try:
         response = requests.get(f"{DJANGO_API_URL}{endpoint}")
@@ -31,11 +29,11 @@ def api_get(endpoint):
     except requests.ConnectionError:
         return "Erro de conexão com a API.", False
 
-# Função para buscar contratos da API Django
+# Função para buscar contratos
 def fetch_contracts():
     return api_get("api/contracts/")[0]
 
-# Menu de navegação para páginas diferentes
+# Menu de navegação
 st.sidebar.title("Gestão de Contratos Inteligentes")
 page = st.sidebar.selectbox("Selecione a página",
                         ["Criar Contrato",
@@ -64,7 +62,7 @@ if page == "Criar Contrato":
             "private_key": private_key
         }
         with st.spinner("Processando..."):
-            result, success = api_post("api/create_contract/", contract_data)
+            result, success = api_post("api/create/", contract_data)
             if success:
                 st.success("Contrato criado com sucesso!")
             else:
@@ -76,16 +74,18 @@ if page == "Assinar Contrato":
     
     contract_id = st.text_input("ID do Contrato")
     private_key = st.text_input("Chave Privada", type="password")
-    user_type = st.selectbox("Tipo de Usuário", ["Locador", "Inquilino"])  # Para indicar quem está assinando
+    user_type = st.selectbox("Tipo de Usuário", ["Locador", "Inquilino"])
     
+    user_type_mapped = "landlord" if user_type == "Locador" else "tenant"
+
     if st.button("Assinar Contrato"):
         signature_data = {
             "contract_id": contract_id,
             "private_key": private_key,
-            "user_type": user_type.lower()
+            "user_type": user_type_mapped.lower()
         }
         with st.spinner("Processando..."):
-            result, success = api_post("api/sign_contract/", signature_data)
+            result, success = api_post(f"api/contracts/{contract_id}/sign/", signature_data)
             if success:
                 st.success("Contrato assinado com sucesso!")
             else:
@@ -97,14 +97,14 @@ if page == "Executar Contrato":
     
     contract_id = st.text_input("ID do Contrato")
     private_key = st.text_input("Chave Privada", type="password")
-    
+
     if st.button("Executar Contrato"):
         execution_data = {
             "contract_id": contract_id,
             "private_key": private_key
         }
         with st.spinner("Processando..."):
-            result, success = api_post("api/execute_contract/", execution_data)
+            result, success = api_post(f"api/contracts/{contract_id}/execute/", execution_data)
             if success:
                 st.success("Contrato executado com sucesso!")
             else:
@@ -118,16 +118,15 @@ if page == "Registrar Pagamento":
     private_key = st.text_input("Chave Privada", type="password")
     payment_type = st.selectbox("Tipo de Pagamento", ["Aluguel", "Depósito"])
     amount = st.number_input("Valor do Pagamento", min_value=0.0, step=0.01)
-    
+
     if st.button("Registrar Pagamento"):
         payment_data = {
-            "contract_id": contract_id,
             "private_key": private_key,
             "payment_type": payment_type,
             "amount": amount
         }
         with st.spinner("Processando..."):
-            result, success = api_post("api/register_payment/", payment_data)
+            result, success = api_post(f"api/contracts/{contract_id}/register_payment/", payment_data)
             if success:
                 st.success(f"Pagamento de {payment_type} registrado com sucesso!")
             else:
@@ -136,7 +135,6 @@ if page == "Registrar Pagamento":
 # Página de Visualizar Contratos
 if page == "Visualizar Contratos":
     st.title("Lista de Contratos de Aluguel")
-
     contracts = fetch_contracts()
 
     if contracts:
@@ -149,18 +147,13 @@ if page == "Visualizar Contratos":
             - Data de Criação: {contract['created_at']}
             """)
             st.markdown("---")
-
-            # Exibir pagamentos relacionados
-            payments, success = api_get(f"api/payments/{contract['id']}/")
+            payments, success = api_get(f"api/contracts/{contract['id']}/payments/")
             if success:
                 for payment in payments:
                     st.write(f"Pagamento: {payment['payment_type']} de {payment['amount']} em {payment['payment_date']}")
-
-            # Verificar encerramento
-            termination, success = api_get(f"api/termination/{contract['id']}/")
+            termination, success = api_get(f"api/contracts/{contract['id']}/termination/")
             if success:
                 st.write(f"Contrato Encerrado em: {termination['termination_date']} por {termination['terminated_by']}")
-            
             st.markdown("---")
     else:
         st.write("Nenhum contrato encontrado.")
@@ -168,18 +161,17 @@ if page == "Visualizar Contratos":
 # Página de Encerrar Contrato
 if page == "Encerrar Contrato":
     st.title("Encerrar Contrato Inteligente")
-    
+
     contract_id = st.text_input("ID do Contrato")
     private_key = st.text_input("Chave Privada", type="password")
-    
+
     if st.button("Encerrar Contrato"):
         termination_data = {
             "contract_id": contract_id,
             "private_key": private_key
         }
-
         with st.spinner("Processando..."):
-            result, success = api_post("api/terminate_contract/", termination_data)
+            result, success = api_post(f"api/contracts/{contract_id}/terminate/", termination_data)
             if success:
                 st.success("Contrato encerrado com sucesso!")
             else:
