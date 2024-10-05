@@ -4,8 +4,7 @@
 echo "Ativando o ambiente virtual..."
 source venv/Scripts/activate
 
-# Certifique-se de que o Ganache GUI está em execução manualmente antes de iniciar o Django e o Streamlit
-echo "Certifique-se de que o Ganache GUI está rodando..."
+
 
 # Rodar os testes primeiro
 # echo "Executando testes..."
@@ -15,6 +14,8 @@ echo "Certifique-se de que o Ganache GUI está rodando..."
 # if [ $? -eq 0 ]; then
     # echo "Todos os testes passaram. Iniciando o servidor..."
 
+echo "Compilando o contrato Solidity..."
+python scripts/compilar_contrato.py
 
 # Aplicar migrações, se necessário
 echo "Aplicando migrações..."
@@ -30,7 +31,3 @@ echo "Iniciando o Streamlit..."
 streamlit run streamlit_app.py &
 
 echo "Projeto iniciado com sucesso!"
-# else
-    # echo "Alguns testes falharam. Corrija os erros antes de iniciar o servidor."
-    # exit 1  # Interromper o script se os testes falharem
-fi+

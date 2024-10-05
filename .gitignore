@@ -164,6 +164,8 @@ dmypy.json
 
 hardhat/
 
+contratos_inteligentes\migrations
+
 # Cython debug symbols
 cython_debug/
 
