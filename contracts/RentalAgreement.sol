@@ -13,6 +13,7 @@ contract RentalAgreement {
     event RentPaid(address indexed tenant, uint256 amount);
     event DepositPaid(address indexed tenant, uint256 amount);
     event ContractTerminated(address indexed landlord, address indexed tenant);
+    event AgreementSigned(address signer);
 
     constructor(uint256 _rentAmount, uint256 _deposit) {
         landlord = msg.sender;
@@ -62,8 +63,10 @@ contract RentalAgreement {
     function signAgreement() public {
         if (msg.sender == landlord) {
             landlordSigned = true;
+            emit AgreementSigned(msg.sender);
         } else if (msg.sender == tenant) {
             tenantSigned = true;
+            emit AgreementSigned(msg.sender);
         } else {
             revert("Only landlord or tenant can sign the agreement.");
         }

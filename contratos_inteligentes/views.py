@@ -1,9 +1,9 @@
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from web3 import Web3, Account
+from django.shortcuts import get_object_or_404 # type: ignore
+from rest_framework.decorators import api_view # type: ignore
+from rest_framework.response import Response # type: ignore
+from web3 import Web3, Account # type: ignore
 from .models import RentalContract, Payment, ContractTermination, ContractEvent
-from django.utils import timezone 
+from django.utils import timezone # type: ignore
 import os
 import json
 
@@ -151,43 +151,33 @@ def pay_rent_api(request, contract_id):
 
 @api_view(['POST'])
 def sign_contract_api(request, contract_id):
-    # Busca o contrato pelo ID
     contract = get_object_or_404(RentalContract, id=contract_id)
     private_key = request.data.get('private_key')
     user_type = request.data.get('user_type')
 
-    # Obter o endereço da conta que está assinando
     account_to_sign = web3.eth.account.from_key(private_key)
 
-    # Carregar o contrato inteligente da blockchain usando o endereço do contrato
-    blockchain_contract = web3.eth.contract(address=contract.contract_address, abi=contract_abi)
+    # Converte o endereço para checksum para garantir compatibilidade
+    contract_address = Web3.to_checksum_address(contract.contract_address)
+    blockchain_contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
-    # Verificar quem está assinando (locador ou inquilino) e atualizar a assinatura
+    # Verifica se é o locador ou o inquilino
     if user_type == 'landlord':
         contract.landlord_signature = account_to_sign.address
-        print(f"Locador assinou o contrato. Endereço da assinatura: {contract.landlord_signature}")
     elif user_type == 'tenant':
         contract.tenant_signature = account_to_sign.address
-        print(f"Inquilino assinou o contrato. Endereço da assinatura: {contract.tenant_signature}")
     else:
         return Response({"error": "Tipo de usuário inválido."}, status=400)
 
     # Verificar se ambas as assinaturas foram feitas
     if contract.is_fully_signed():
         contract.status = 'active'
-        print(f"Contrato {contract_id} foi completamente assinado. Status atualizado para 'ativo'.")
 
-    # Registrar o estado do contrato antes de salvar
-    print(f"Estado do contrato antes de salvar: Locador: {contract.landlord_signature}, Inquilino: {contract.tenant_signature}, Status: {contract.status}")
+    # Salvar o contrato atualizado no banco de dados
+    contract.save()
 
+    # Realizar a transação de assinatura no contrato inteligente
     try:
-        # Salvar o contrato com as assinaturas no banco de dados
-        contract.save()
-
-        # Registrar no log após salvar
-        print(f"Contrato {contract_id} salvo no banco de dados com as assinaturas.")
-
-        # Realizar a transação na blockchain para assinar o contrato
         tx = blockchain_contract.functions.signAgreement().build_transaction({
             'from': account_to_sign.address,
             'nonce': web3.eth.get_transaction_count(account_to_sign.address),
@@ -199,7 +189,7 @@ def sign_contract_api(request, contract_id):
         tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         web3.eth.wait_for_transaction_receipt(tx_hash)
 
-        # Registrar o evento da transação
+        # Registrar o evento da transação no banco de dados
         ContractEvent.objects.create(
             contract=contract,
             event_type='sign',
@@ -207,14 +197,8 @@ def sign_contract_api(request, contract_id):
             timestamp=timezone.now()
         )
 
-        # Retornar sucesso
-        return Response({
-            "message": "Contrato assinado com sucesso!",
-            "tx_hash": tx_hash.hex(),
-            "status": contract.status
-        }, status=200)
+        return Response({"message": "Contrato assinado com sucesso!", "tx_hash": tx_hash.hex(), "status": contract.status}, status=200)
     except Exception as e:
-        print(f"Erro ao salvar ou processar a assinatura: {str(e)}")
         return Response({"error": str(e)}, status=500)
 
 # View para executar contrato

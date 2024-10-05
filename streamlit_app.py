@@ -62,7 +62,7 @@ if page == "Criar Contrato":
             "private_key": private_key
         }
         with st.spinner("Processando..."):
-            result, success = api_post("api/create/", contract_data)
+            result, success = api_post("api/create_contract/", contract_data)
             if success:
                 st.success("Contrato criado com sucesso!")
             else:
