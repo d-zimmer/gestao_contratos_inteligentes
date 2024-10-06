@@ -1,8 +1,13 @@
 from web3 import Web3
+import os
+from dotenv import load_dotenv
 
-web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:7545"))
+load_dotenv()
+
+GANACHE_URL = os.getenv("GANACHE_URL")
+web3 = Web3(Web3.HTTPProvider(GANACHE_URL))
 
 if web3.is_connected():
-    print("Conectado à blockchain local")
+    print("Conectado à rede local Ganache")
 else:
-    print("Falha ao conectar")
+    print("Erro ao conectar à rede Ganache")

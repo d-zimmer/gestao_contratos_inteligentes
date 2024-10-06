@@ -1,13 +1,20 @@
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from web3 import Web3, Account
+from django.shortcuts import get_object_or_404 # type:ignore
+from rest_framework.decorators import api_view # type:ignore
+from rest_framework.response import Response # type:ignore
+from web3 import Web3, Account # type:ignore
 from .models import RentalContract, Payment, ContractTermination, ContractEvent
-from django.utils import timezone
+from django.utils import timezone # type:ignore
+from dotenv import load_dotenv # type:ignore
 import os
 import json
+import traceback
 
-# Função para carregar o ABI e bytecode do contrato inteligente
+load_dotenv()
+
+# Conectar ao Ganache
+web3 = Web3(Web3.HTTPProvider(os.getenv("GANACHE_URL")))
+
+# Função para carregar os dados do contrato (ABI e Bytecode)
 def load_contract_data():
     with open(os.path.join('build', 'RentalAgreementABI.json'), 'r') as abi_file:
         contract_abi = json.load(abi_file)
@@ -16,27 +23,31 @@ def load_contract_data():
         bytecode = compiled_contract["contracts"]["RentalAgreement.sol"]["RentalAgreement"]["evm"]["bytecode"]["object"]
     return contract_abi, bytecode
 
-# Função para verificar a conexão com o nó Ethereum
+# Função para verificar a conexão com o Ganache
 def check_connection():
     if not web3.is_connected():
         raise Exception("Não conectado à rede Ethereum. Verifique sua conexão.")
 
-web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:7545"))
-
-# Verificar se a conexão foi estabelecida
+# Verificar a conexão com o Ganache
 if web3.is_connected():
     print("Conectado à rede local Ganache")
 else:
     print("Erro ao conectar")
 
-# Definir o ABI e o endereço do contrato (contratos já implantados)
-with open(os.path.join('build', 'RentalAgreementABI.json'), 'r') as abi_file:
-    contract_abi = json.load(abi_file)
+# Carregar ABI e Bytecode uma vez
+contract_abi, bytecode = load_contract_data()
 
+# Função para normalizar e verificar o endereço
+def normalize_address(address):
+    try:
+        return Web3.to_checksum_address(address)
+    except ValueError:
+        raise ValueError(f"Endereço inválido: {address}")
+
+# Definir o endereço do contrato global
 global_contract_address = Web3.to_checksum_address("0x5fbdb2315678afecb367f032d93f642f64180aa3")
 global_contract = web3.eth.contract(address=global_contract_address, abi=contract_abi)
 
-# View para listar todos os contratos
 @api_view(['GET'])
 def contract_list_api(request):
     contracts = RentalContract.objects.all()
@@ -52,7 +63,6 @@ def contract_list_api(request):
     } for contract in contracts]
     return Response(contracts_data)
 
-# View para criar um novo contrato
 @api_view(['POST'])
 def create_contract_api(request):
     try:
@@ -66,15 +76,14 @@ def create_contract_api(request):
     deposit_amount = request.data.get('deposit_amount')
     private_key = request.data.get('private_key')
 
-    # Converte os valores de ETH para wei (1 ETH = 10^18 wei)
-    try:
-        rent_amount = Web3.to_wei(float(rent_amount), 'ether')
-        deposit_amount = Web3.to_wei(float(deposit_amount), 'ether')
-    except ValueError:
-        return Response({"error": "Valores de aluguel ou depósito inválidos."}, status=400)
-
-    if rent_amount <= 0 or deposit_amount <= 0:
+    if not rent_amount or not deposit_amount:
         return Response({"error": "Valores de aluguel ou depósito inválidos"}, status=400)
+
+    try:
+        rent_amount = int(rent_amount)
+        deposit_amount = int(deposit_amount)
+    except ValueError:
+        return Response({"error": "Valores de aluguel ou depósito devem ser números inteiros válidos."}, status=400)
 
     try:
         account = web3.eth.account.from_key(private_key)
@@ -82,33 +91,27 @@ def create_contract_api(request):
         return Response({"error": "Chave privada inválida."}, status=400)
 
     try:
-        landlord = Web3.to_checksum_address(landlord)
-        tenant = Web3.to_checksum_address(tenant)
-    except ValueError:
-        return Response({"error": "Endereço inválido."}, status=400)
+        landlord = normalize_address(landlord)
+        tenant = normalize_address(tenant)
+    except ValueError as e:
+        return Response({"error": str(e)}, status=400)
 
-    account = web3.eth.account.from_key(private_key)  # Locador que cria o contrato
-    landlord = Web3.to_checksum_address(landlord)
-    tenant = Web3.to_checksum_address(tenant)
+    smart_contract = web3.eth.contract(abi=contract_abi, bytecode=bytecode)
 
-    # Contrato inteligente sendo criado na blockchain
-    contract_abi, bytecode = load_contract_data()
-    contract = web3.eth.contract(abi=contract_abi, bytecode=bytecode)
+    try:
+        transaction = smart_contract.constructor(tenant, rent_amount, deposit_amount).build_transaction({
+            'from': account.address,
+            'nonce': web3.eth.get_transaction_count(account.address),
+            'gas': 3000000,
+            'gasPrice': web3.to_wei('20', 'gwei')
+        })
 
-    transaction = contract.constructor(landlord, tenant).build_transaction({
-        'from': account.address,
-        'nonce': web3.eth.get_transaction_count(account.address),
-        'gas': 3000000,
-        'gasPrice': web3.to_wei('20', 'gwei')
-    })
+        signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
-    tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-    tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-
-    # Verifique o sucesso do deploy e registre no banco de dados
-    if tx_receipt['status'] == 1:
         new_contract_address = tx_receipt.contractAddress
+
         RentalContract.objects.create(
             landlord=landlord,
             tenant=tenant,
@@ -117,11 +120,16 @@ def create_contract_api(request):
             contract_address=new_contract_address,
             status='pending'
         )
-        return Response({"message": "Contrato criado com sucesso!", "contract_address": new_contract_address, "tx_hash": tx_hash.hex()})
-    else:
-        return Response({"error": "Erro ao criar o contrato na blockchain"}, status=500)
 
-# View para pagar aluguel
+        return Response({
+            "message": "Contrato criado com sucesso!",
+            "tx_hash": tx_hash.hex(),
+            "contract_address": new_contract_address
+        }, status=201)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
 @api_view(['POST'])
 def pay_rent_api(request, contract_id):
     try:
@@ -205,38 +213,61 @@ def sign_contract_api(request, contract_id):
     private_key = request.data.get('private_key')
     user_type = request.data.get('user_type')  # 'landlord' ou 'tenant'
 
-    # Validação do tipo de usuário
-    if user_type not in ['landlord', 'tenant']:
-        return Response({"error": "Tipo de usuário inválido."}, status=400)
-
-    # Obter conta a partir da chave privada
     try:
         account_to_sign = web3.eth.account.from_key(private_key)
     except ValueError:
         return Response({"error": "Chave privada inválida."}, status=400)
 
-    # Verificar se o endereço é o locador ou o inquilino
-    if user_type == 'landlord' and account_to_sign.address.lower() != rental_contract.landlord.lower():
+    # Verificar endereços com checksum
+    try:
+        landlord = normalize_address(rental_contract.landlord)
+        tenant = normalize_address(rental_contract.tenant)
+    except ValueError as e:
+        return Response({"error": str(e)}, status=400)
+
+    print(f"Endereço derivado da chave privada: {account_to_sign.address}")
+    print(f"Endereço do locador no contrato: {landlord}")
+    print(f"Endereço do inquilino no contrato: {tenant}")
+
+    # Verificar o estado do contrato no blockchain antes de assinar
+    smart_contract = web3.eth.contract(address=Web3.to_checksum_address(rental_contract.contract_address), abi=contract_abi)
+    
+    # Verificar se o contrato está ativo (não encerrado)
+    is_active = smart_contract.functions.isContractActive().call()
+    print(f"Contrato ativo: {is_active}")
+    
+    if not is_active:
+        return Response({"error": "O contrato já foi encerrado e não pode mais ser assinado."}, status=403)
+
+    # Verificar se o contrato já foi totalmente assinado
+    fully_signed = smart_contract.functions.isFullySigned().call()
+    print(f"Contrato já assinado completamente: {fully_signed}")
+    
+    if fully_signed:
+        return Response({"error": "O contrato já foi assinado por ambas as partes."}, status=403)
+
+    # Verificar quem está tentando assinar o contrato
+    if user_type == 'landlord' and account_to_sign.address.lower() != landlord.lower():
         return Response({"error": "Somente o locador pode assinar como 'landlord'."}, status=403)
 
-    if user_type == 'tenant' and account_to_sign.address.lower() != rental_contract.tenant.lower():
+    if user_type == 'tenant' and account_to_sign.address.lower() != tenant.lower():
         return Response({"error": "Somente o inquilino pode assinar como 'tenant'."}, status=403)
 
-    # Carregar contrato inteligente
-    smart_contract = web3.eth.contract(address=Web3.to_checksum_address(rental_contract.contract_address), abi=contract_abi)
+    # Verificar o nonce da transação
+    nonce = web3.eth.get_transaction_count(account_to_sign.address)
+    print(f"Nonce atual para o endereço {account_to_sign.address}: {nonce}")
 
     try:
         # Construir e assinar a transação
         tx = smart_contract.functions.signAgreement().build_transaction({
             'from': account_to_sign.address,
-            'nonce': web3.eth.get_transaction_count(account_to_sign.address),
-            'gas': 100000,
+            'nonce': nonce,
+            'gas': 200000,  # Aumentar o limite de gás
             'gasPrice': web3.to_wei('20', 'gwei')
         })
 
         signed_tx = web3.eth.account.sign_transaction(tx, private_key)
         tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
         # Verificar se a transação foi bem-sucedida
@@ -270,9 +301,10 @@ def sign_contract_api(request, contract_id):
             return Response({"error": "Falha na transação de assinatura."}, status=500)
 
     except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        error_traceback = traceback.format_exc()
+        print(f"Erro ao assinar o contrato: {error_traceback}")
+        return Response({"error": f"Erro ao assinar o contrato: {str(e)}", "traceback": error_traceback}, status=500)
 
-# View para executar contrato
 @api_view(['POST'])
 def execute_contract_api(request, contract_id):
     try:
