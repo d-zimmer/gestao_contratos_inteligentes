@@ -7,7 +7,7 @@ from web3 import Web3 # type:ignore
 
 load_dotenv()
 
-DJANGO_API_URL = os.getenv("DJANGO_API_URL")  # Exemplo: "http://localhost:8000/"
+DJANGO_API_URL = os.getenv("DJANGO_API_URL")
 
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
@@ -52,12 +52,10 @@ st.sidebar.title("Gestão de Contratos Inteligentes")
 page = st.sidebar.selectbox("Selecione a página",
                             ["Criar Contrato",
                              "Assinar Contrato",
-                             "Executar Contrato",
                              "Registrar Pagamento",
                              "Visualizar Contratos",
                              "Encerrar Contrato"])
 
-# Página de Criar Contrato
 if page == "Criar Contrato":
     st.title("Criar Novo Contrato")
     
@@ -65,7 +63,10 @@ if page == "Criar Contrato":
     tenant = st.text_input("Endereço do Inquilino")
     rent_amount = st.number_input("Valor do Aluguel (ETH)", min_value=0.0, step=0.01)
     deposit_amount = st.number_input("Valor do Depósito (ETH)", min_value=0.0, step=0.01)
-    private_key = st.text_input("Chave Privada do Locador", type="password")
+    start_date = st.date_input("Data de Início do Contrato")
+    end_date = st.date_input("Data de Término do Contrato")
+    contract_duration = st.number_input("Duração do Contrato (Meses)", min_value=1, step=1)
+    private_key = st.text_input("Chave Privada (Locador)", type="password")
 
     if st.button("Criar Contrato"):
         if not landlord or not tenant:
@@ -73,13 +74,20 @@ if page == "Criar Contrato":
         elif not private_key:
             st.error("Chave privada do locador é obrigatória.")
         else:
+            # rent_amount = Web3.to_wei(rent_amount_eth, 'ether')  # Converter ETH para Wei
+            # deposit_amount = Web3.to_wei(deposit_amount_eth, 'ether')  # Converter ETH para Wei
+
             contract_data = {
                 "landlord": landlord,
                 "tenant": tenant,
                 "rent_amount": rent_amount,
                 "deposit_amount": deposit_amount,
+                "start_date": str(start_date),
+                "end_date": str(end_date),
+                "contract_duration": contract_duration,
                 "private_key": private_key
             }
+
             with st.spinner("Processando..."):
                 result, success = api_post("api/create/", contract_data)
                 if success:
@@ -122,35 +130,11 @@ if page == "Assinar Contrato":
             except Exception as e:
                 st.error(f"Erro ao derivar endereço da chave privada: {str(e)}")
 
-# Página de Executar Contrato
-if page == "Executar Contrato":
-    st.title("Executar Contrato Inteligente")
-    
-    contract_id = st.text_input("ID do Contrato")
-    private_key = st.text_input("Chave Privada", type="password")
-
-    if st.button("Executar Contrato"):
-        if not contract_id:
-            st.error("ID do contrato é obrigatório.")
-        elif not private_key:
-            st.error("Chave privada é obrigatória.")
-        else:
-            execution_data = {
-                "private_key": private_key
-            }
-            with st.spinner("Processando..."):
-                result, success = api_post(f"api/contracts/{contract_id}/execute/", execution_data)
-                if success:
-                    st.success(f"Contrato executado com sucesso!\nTx Hash: {result['tx_hash']}")
-                else:
-                    st.error(f"Erro ao executar contrato: {result}")
-
-# Página de Registrar Pagamento
 if page == "Registrar Pagamento":
     st.title("Registrar Pagamento")
     
     contract_id = st.text_input("ID do Contrato")
-    private_key = st.text_input("Chave Privada", type="password")
+    private_key = st.text_input("Chave Privada (Inquilino)", type="password")
     payment_type = st.selectbox("Tipo de Pagamento", ["Aluguel", "Depósito"])
     amount = st.number_input("Valor do Pagamento (ETH)", min_value=0.0, step=0.01)
 
@@ -174,7 +158,6 @@ if page == "Registrar Pagamento":
                 else:
                     st.error(f"Erro ao registrar pagamento: {result}")
 
-# Página de Visualizar Contratos
 if page == "Visualizar Contratos":
     st.title("Lista de Contratos de Aluguel")
     contracts = fetch_contracts()
@@ -193,7 +176,7 @@ if page == "Visualizar Contratos":
             """)
             st.markdown("---")
 
-            # Buscar eventos relacionados ao contrato
+            # Visualizando os eventos registrados
             events, success = api_get(f"api/contracts/{contract['id']}/events/")
             if success and events:
                 st.subheader("Eventos")
@@ -206,17 +189,15 @@ if page == "Visualizar Contratos":
                     """)
             else:
                 st.write("Nenhum evento encontrado para este contrato.")
-
             st.markdown("### ")
     else:
         st.write("Nenhum contrato encontrado.")
 
-# Página de Encerrar Contrato
 if page == "Encerrar Contrato":
     st.title("Encerrar Contrato Inteligente")
 
     contract_id = st.text_input("ID do Contrato")
-    private_key = st.text_input("Chave Privada", type="password")
+    private_key = st.text_input("Chave Privada (Locador)", type="password")
 
     if st.button("Encerrar Contrato"):
         if not contract_id:
@@ -228,6 +209,7 @@ if page == "Encerrar Contrato":
                 "private_key": private_key
             }
             with st.spinner("Processando..."):
+                # Certifique-se de que o endpoint 'terminate' seja o mesmo que você configurou
                 result, success = api_post(f"api/contracts/{contract_id}/terminate/", termination_data)
                 if success:
                     st.success(f"Contrato encerrado com sucesso!\nTx Hash: {result['tx_hash']}")

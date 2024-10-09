@@ -1,21 +1,23 @@
-from django.db import models
-from django.utils import timezone
-from django.core.exceptions import ValidationError
+from django.db import models # type: ignore
+from django.utils import timezone # type: ignore
+from django.core.exceptions import ValidationError # type: ignore
 
-# Opções de status para o contrato
 STATUS_CHOICES = [
     ('pending', 'Pendente'),
     ('active', 'Ativo'),
     ('terminated', 'Encerrado'),
 ]
 
-# Modelo para armazenar dados de um contrato de aluguel
 class RentalContract(models.Model):
     landlord = models.CharField(max_length=42)
     tenant = models.CharField(max_length=42)
-    rent_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    contract_address = models.CharField(max_length=42)
+    rent_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    deposit_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    contract_address = models.CharField(max_length=42, unique=True)  # Certifique-se de que esse campo existe
+    start_date = models.DateField(default=timezone.now)
+    end_date = models.DateField(null=True, blank=True)
+    contract_duration = models.PositiveIntegerField(help_text="Duração do contrato em meses", null=True)
+    termination_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     landlord_signature = models.CharField(max_length=132, blank=True)
     tenant_signature = models.CharField(max_length=132, blank=True)
@@ -27,9 +29,12 @@ class RentalContract(models.Model):
 
     def __str__(self):
         return f"Contrato de {self.landlord} para {self.tenant}"
-    
+
     def is_fully_signed(self):
         return bool(self.landlord_signature) and bool(self.tenant_signature)
+    
+    def is_contract_active(self):
+        return self.start_date <= timezone.now() <= self.end_date
 
     class Meta:
         db_table = 'contratos'
@@ -80,7 +85,6 @@ class ContractTermination(models.Model):
     class Meta:
         db_table = 'encerramento_contrato'
 
-# Modelo para eventos de contrato
 class ContractEvent(models.Model):
     EVENT_TYPES = [
         ('create', 'Create Contract'),
@@ -89,17 +93,20 @@ class ContractEvent(models.Model):
         ('pay_deposit', 'Pay Deposit'),
         ('execute', 'Execute Contract'),
         ('terminate', 'Terminate Contract'),
+        ('partial_payment', 'Partial Payment'),  # Novo tipo de evento
+        ('failure', 'Failure'),  # Falha em alguma ação
     ]
     
     contract = models.ForeignKey(RentalContract, on_delete=models.CASCADE, related_name='events')
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
-    user_address = models.CharField(max_length=42)  # Endereço do usuário que realizou a ação
-    event_data = models.JSONField()  # Informações adicionais do evento, ex: hash da transação
-    transaction_hash = models.CharField(max_length=66, blank=True, null=True)  # Hash da transação no blockchain
-    from_address = models.CharField(max_length=42, blank=True, null=True)  # Endereço de quem fez a transação
-    gas_used = models.BigIntegerField(blank=True, null=True)  # Opcional: quantidade de gas usado
-    block_number = models.BigIntegerField(blank=True, null=True)  # Opcional: número do bloco
+    user_address = models.CharField(max_length=42)
+    event_data = models.JSONField()  # Informações adicionais do evento
+    transaction_hash = models.CharField(max_length=66, blank=True, null=True)
+    from_address = models.CharField(max_length=42, blank=True, null=True)
+    gas_used = models.BigIntegerField(blank=True, null=True)
+    block_number = models.BigIntegerField(blank=True, null=True)
     timestamp = models.DateTimeField(default=timezone.now)
+    detalhes = models.TextField(blank=True, null=True)  # Campo adicional para detalhes do evento
 
     def __str__(self):
         return f"{self.event_type} no contrato {self.contract.id}"

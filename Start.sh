@@ -4,8 +4,6 @@
 echo "Ativando o ambiente virtual..."
 source venv/Scripts/activate
 
-
-
 # Rodar os testes primeiro
 # echo "Executando testes..."
 # python manage.py test
