@@ -10,74 +10,20 @@ import json
 import traceback
 import datetime
 from decimal import Decimal
+from .utils.load_contract_data import load_contract_data
+from .utils.check_connection import check_connection
+from .utils.normalize_address import normalize_address
+from .utils.log_contract_event import log_contract_event
 
-load_dotenv()
-
-# Conectar ao Ganache
-web3 = Web3(Web3.HTTPProvider(os.getenv("GANACHE_URL")))
-
-# Função para carregar os dados do contrato (ABI e Bytecode)
-def load_contract_data():
-    with open(os.path.join('build', 'RentalAgreementABI.json'), 'r') as abi_file:
-        contract_abi = json.load(abi_file)
-    with open(os.path.join('build', 'compiled_contract.json'), 'r') as bytecode_file:
-        compiled_contract = json.load(bytecode_file)
-        bytecode = compiled_contract["contracts"]["RentalAgreement.sol"]["RentalAgreement"]["evm"]["bytecode"]["object"]
-    return contract_abi, bytecode
-
-# Função para verificar a conexão com o Ganache
-def check_connection():
-    if not web3.is_connected():
-        raise Exception("Não conectado à rede Ethereum. Verifique sua conexão.")
-
-# Verificar a conexão com o Ganache
-if web3.is_connected():
-    print("Conectado à rede local Ganache")
-else:
-    print("Erro ao conectar")
-
-# Carregar ABI e Bytecode uma vez
 contract_abi, bytecode = load_contract_data()
 
-# Função para normalizar e verificar o endereço
-def normalize_address(address):
-    try:
-        return Web3.to_checksum_address(address)
-    except ValueError:
-        raise ValueError(f"Endereço inválido: {address}")
-
-# Definir o endereço do contrato global
-global_contract_address = Web3.to_checksum_address("0x5fbdb2315678afecb367f032d93f642f64180aa3")
-global_contract = web3.eth.contract(address=global_contract_address, abi=contract_abi)
-
-def log_contract_event(contract, event_type, user_address, tx_hash=None, event_data=None):
-    ContractEvent.objects.create(
-        contract=contract,
-        event_type=event_type,
-        user_address=user_address,
-        event_data=event_data or {},
-        transaction_hash=tx_hash
-    )
-
-@api_view(['GET'])
-def contract_list_api(request):
-    contracts = RentalContract.objects.all()
-    contracts_data = [{
-        "id": contract.id,
-        "landlord": contract.landlord,
-        "tenant": contract.tenant,
-        "rent_amount": str(contract.rent_amount),
-        "deposit_amount": str(contract.deposit_amount),
-        "contract_address": contract.contract_address,
-        "status": contract.status,
-        "created_at": contract.created_at
-    } for contract in contracts]
-    return Response(contracts_data)
+# global_contract_address = Web3.to_checksum_address("0x5fbdb2315678afecb367f032d93f642f64180aa3")
+# global_contract = web3.eth.contract(address=global_contract_address, abi=contract_abi)
 
 @api_view(['POST'])
 def create_contract_api(request):
     try:
-        check_connection()  # Verificar a conexão com o Ganache
+        web3 = check_connection()  # Verificar a conexão com o Ganache
     except Exception as e:
         return Response({"error": "Falha na conexão com a rede Ethereum: " + str(e)}, status=500)
 
@@ -94,8 +40,8 @@ def create_contract_api(request):
         return Response({"error": "Valores de aluguel, depósito ou duração do contrato inválidos"}, status=400)
 
     try:
-        rent_amount = int(rent_amount)  # Já é passado em Wei
-        deposit_amount = int(deposit_amount)  # Já é passado em Wei
+        rent_amount = int(rent_amount)
+        deposit_amount = int(deposit_amount)
         contract_duration = int(contract_duration)
     except ValueError:
         return Response({"error": "Valores de aluguel, depósito ou duração do contrato devem ser números válidos."}, status=400)
@@ -114,7 +60,7 @@ def create_contract_api(request):
     smart_contract = web3.eth.contract(abi=contract_abi, bytecode=bytecode)
 
     try:
-        transaction = smart_contract.constructor(tenant, rent_amount, deposit_amount).build_transaction({
+        transaction = smart_contract.constructor(tenant, rent_amount, deposit_amount, contract_duration).build_transaction({
             'from': account.address,
             'nonce': web3.eth.get_transaction_count(account.address),
             'gas': 3000000,
@@ -147,53 +93,14 @@ def create_contract_api(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-
-@api_view(['POST'])
-def recurring_payment_api(request, contract_id):
-    try:
-        check_connection()
-        rental_contract = get_object_or_404(RentalContract, id=contract_id)
-        private_key = request.data.get('private_key')
-        payment_type = request.data.get('payment_type')  # 'Aluguel' ou 'Depósito'
-        amount = request.data.get('amount')
-
-        if not amount or float(amount) <= 0:
-            return Response({"error": "Valor do pagamento inválido."}, status=400)
-
-        account_to_pay = web3.eth.account.from_key(private_key)
-
-        # Verificar se o contrato expirou
-        if rental_contract.end_date < timezone.now():
-            return Response({"error": "O contrato expirou."}, status=400)
-
-        # Função de pagamento automatizada para evitar atrasos
-        try:
-            tx = global_contract.functions.payRent().build_transaction({
-                'from': account_to_pay.address,
-                'value': web3.to_wei(amount, 'ether'),
-                'nonce': web3.eth.get_transaction_count(account_to_pay.address),
-                'gas': 200000,
-                'gasPrice': web3.to_wei('20', 'gwei')
-            })
-
-            signed_tx = web3.eth.account.sign_transaction(tx, private_key)
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-
-            log_contract_event(rental_contract, 'pay_rent', account_to_pay.address, tx_hash.hex())
-
-            return Response({"message": "Pagamento registrado com sucesso!", "tx_hash": tx_hash.hex()})
-        except Exception as e:
-            return Response({"error": f"Erro ao registrar pagamento: {str(e)}"}, status=500)
-
-    except Exception as e:
-        return Response({"error": f"Erro ao processar pagamento: {str(e)}", "traceback": traceback.format_exc()}, status=500)
-
+    
 @api_view(['POST'])
 def sign_contract_api(request, contract_id):
     rental_contract = get_object_or_404(RentalContract, id=contract_id)
     private_key = request.data.get('private_key')
     user_type = request.data.get('user_type')  # 'landlord' ou 'tenant'
+    
+    web3 = check_connection()
 
     try:
         account_to_sign = web3.eth.account.from_key(private_key)
@@ -277,11 +184,11 @@ def sign_contract_api(request, contract_id):
 
     except Exception as e:
         return Response({"error": f"Erro ao assinar o contrato: {str(e)}"}, status=500)
-
+    
 @api_view(['POST'])
 def register_payment_api(request, contract_id):
     try:
-        check_connection()
+        web3 = check_connection()
         rental_contract = get_object_or_404(RentalContract, id=contract_id)
         private_key = request.data.get('private_key')
         payment_type = request.data.get('payment_type')  # 'Aluguel' ou 'Depósito'
@@ -379,11 +286,30 @@ def register_payment_api(request, contract_id):
 
     except Exception as e:
         return Response({"error": f"Erro ao processar pagamento: {str(e)}", "traceback": traceback.format_exc()}, status=500)
+    
+@api_view(['GET'])
+def contract_list_api(request):
+    contracts = RentalContract.objects.all()
+    contracts_data = [{
+        "id": contract.id,
+        "landlord": contract.landlord,
+        "tenant": contract.tenant,
+        "rent_amount": str(contract.rent_amount),
+        "deposit_amount": str(contract.deposit_amount),
+        'start_date': str(contract.start_date),
+        'end_date': str(contract.end_date),
+        "contract_address": contract.contract_address,
+        "status": contract.status,
+        "created_at": contract.created_at
+    } for contract in contracts]
+    return Response(contracts_data)
 
 @api_view(['POST'])
 def terminate_contract_api(request, contract_id):
     rental_contract = get_object_or_404(RentalContract, id=contract_id)
     private_key = request.data.get('private_key')
+
+    web3 = check_connection()
 
     try:
         account_to_terminate = web3.eth.account.from_key(private_key)
@@ -454,45 +380,70 @@ def contract_events_api(request, contract_id):
     } for event in events]
     return Response(event_data)
 
-@api_view(['GET'])
-def test_contract_functions(request, contract_id):
+@api_view(['POST'])
+def recurring_payment_api(request, contract_id):
     try:
         check_connection()
         rental_contract = get_object_or_404(RentalContract, id=contract_id)
-        smart_contract = web3.eth.contract(address=Web3.to_checksum_address(rental_contract.contract_address), abi=contract_abi)
+        private_key = request.data.get('private_key')
+        payment_type = request.data.get('payment_type')  # 'Aluguel' ou 'Depósito'
+        amount = request.data.get('amount')
 
+        if not amount or float(amount) <= 0:
+            return Response({"error": "Valor do pagamento inválido."}, status=400)
+
+        account_to_pay = web3.eth.account.from_key(private_key)
+
+        # Verificar se o contrato expirou
+        if rental_contract.end_date < timezone.now():
+            return Response({"error": "O contrato expirou."}, status=400)
+
+        # Função de pagamento automatizada para evitar atrasos
         try:
-            print("Chamando getRentAmount")
-            rent_amount = smart_contract.functions.getRentAmount().call()
-            print(f"Valor esperado do aluguel: {rent_amount} Wei")
+            tx = global_contract.functions.payRent().build_transaction({
+                'from': account_to_pay.address,
+                'value': web3.to_wei(amount, 'ether'),
+                'nonce': web3.eth.get_transaction_count(account_to_pay.address),
+                'gas': 200000,
+                'gasPrice': web3.to_wei('20', 'gwei')
+            })
 
-            print("Chamando getDepositAmount")
-            deposit_amount = smart_contract.functions.getDepositAmount().call()
-            print(f"Valor esperado do depósito: {deposit_amount} Wei")
+            signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-            return Response({
-                "rent_amount": rent_amount,
-                "deposit_amount": deposit_amount
-            }, status=200)
+            log_contract_event(rental_contract, 'pay_rent', account_to_pay.address, tx_hash.hex())
 
+            return Response({"message": "Pagamento registrado com sucesso!", "tx_hash": tx_hash.hex()})
         except Exception as e:
-            print(f"Erro ao chamar funções do contrato: {str(e)}")
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": f"Erro ao registrar pagamento: {str(e)}"}, status=500)
 
     except Exception as e:
         return Response({"error": f"Erro ao processar pagamento: {str(e)}", "traceback": traceback.format_exc()}, status=500)
 
-def registrar_evento_fallback(evento, dados, motivo_falha):
-    # Registrar tentativa de evento que falhou
-    ContractEvent.objects.create(
-        event_type=evento,
-        event_data=dados,
-        status="failed",
-        failure_reason=motivo_falha,
-        timestamp=timezone.now()
-    )
+@api_view(['POST'])
+def simular_tempo(request, contract_id):
+    web3 = check_connection()
 
     try:
-        tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        contrato = RentalContract.objects.get(id=contract_id)
+        meses = request.data.get('meses')
+        private_key = request.data.get('private_key')
+
+        # Chamada à função simularPassagemDeMeses no contrato inteligente
+        contract_instance = web3.eth.contract(address=contrato.contract_address, abi=contract_abi)
+        tx_hash = contract_instance.functions.simularPassagemDeMeses(int(meses)).transact({
+            'from': web3.eth.account.from_key(private_key).address,
+            'gas': 3000000,
+            'gasPrice': web3.to_wei('20', 'gwei')
+        })
+
+        web3.eth.wait_for_transaction_receipt(tx_hash)
+
+        data_termino_atualizada = contract_instance.functions.getContractEndDate().call()
+        contrato.end_date = datetime.datetime.fromtimestamp(data_termino_atualizada)
+        contrato.save()
+
+        return Response({'message': 'Tempo simulado e contrato renovado.', 'tx_hash': tx_hash.hex()})
     except Exception as e:
-        registrar_evento_fallback("Pagamento", {"contrato": contract_id}, str(e))
+        return Response({'error': str(e)}, status=500)

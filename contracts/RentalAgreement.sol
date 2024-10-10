@@ -12,6 +12,7 @@ contract RentalAgreement {
     bool public isActive;
     uint256 public dataVencimentoAluguel;
     uint256 public dataTerminoContrato;
+    uint256 public duracaoContratoMeses;
 
     event RentPaid(address indexed inquilino, uint256 amount);
     event DepositPaid(address indexed inquilino, uint256 amount);
@@ -21,14 +22,17 @@ contract RentalAgreement {
     event RentPaymentPending(address indexed inquilino, uint256 dueDate);
     event ContractExpired(address indexed locador, address indexed inquilino);
     event PaymentLate(address indexed inquilino, uint256 daysLate);
+    event TimeSimulation(uint256 meses);
 
-    constructor(address _inquilino, uint256 _rentAmount, uint256 _deposit) {
+    constructor(address _inquilino, uint256 _rentAmount, uint256 _deposit, uint256 _duracaoContratoMeses) {
         locador = msg.sender;
         inquilino = _inquilino;
-        rentAmount = _rentAmount * (1 ether);  // Armazenar valores em Wei
-        deposit = _deposit * (1 ether);        // Armazenar valores em Wei
+        rentAmount = _rentAmount * (1 ether);
+        deposit = _deposit * (1 ether);
+        duracaoContratoMeses = _duracaoContratoMeses;  // Armazena a duração do contrato
         isTerminated = false;
         isActive = false;
+        dataTerminoContrato = block.timestamp + (duracaoContratoMeses * 30 days);
     }
 
     function payRent() public payable {
@@ -97,22 +101,15 @@ contract RentalAgreement {
     address, address, uint256, uint256, bool, bool, bool, bool
     ) {
         return (
-            locador,           // Endereço do locador
-            inquilino,         // Endereço do inquilino
-            rentAmount,        // Valor do aluguel
-            deposit,           // Valor do depósito
-            isTerminated,      // Se o contrato está encerrado
-            locadorSigned,     // Se o locador já assinou
-            inquilinoSigned,   // Se o inquilino já assinou
-            isActive           // Se o contrato está ativo
+            locador,
+            inquilino,
+            rentAmount,
+            deposit,
+            isTerminated,
+            locadorSigned,
+            inquilinoSigned,
+            isActive
         );
-    }
-
-    function renovarContrato(uint256 novoPrazo) public {
-        require(msg.sender == locador || msg.sender == inquilino, unicode"Somente locador ou inquilino podem renovar o contrato.");
-        require(!isTerminated, unicode"Contrato já foi encerrado.");
-
-        emit ContractRenewed(locador, inquilino, block.timestamp + novoPrazo);
     }
 
     function configurarDataVencimento(uint256 dias) public {
@@ -127,13 +124,61 @@ contract RentalAgreement {
     }
 
     function verificarStatus() public {
-    if (block.timestamp > dataVencimentoAluguel && !isTerminated) {
-        uint256 diasAtraso = (block.timestamp - dataVencimentoAluguel) / 1 days;
-        emit PaymentLate(inquilino, diasAtraso);
+        if (block.timestamp > dataVencimentoAluguel && !isTerminated) {
+            uint256 diasAtraso = (block.timestamp - dataVencimentoAluguel) / 1 days;
+            emit PaymentLate(inquilino, diasAtraso);
+        }
+        
+        if (block.timestamp > dataTerminoContrato) {
+            emit ContractExpired(locador, inquilino);
+        }
     }
-    
-    if (block.timestamp > dataTerminoContrato) {
-        emit ContractExpired(locador, inquilino);
+
+    function autoRenovar(uint256 durationInMonths) public {
+        require(block.timestamp > dataTerminoContrato, unicode"Contrato ainda não expirou.");
+        require(!isTerminated, "Contrato foi encerrado.");
+        
+        uint256 novoPrazo = durationInMonths * 30 days;
+        uint256 newStartDate = block.timestamp;
+        uint256 newEndDate = newStartDate + novoPrazo;
+
+        dataTerminoContrato = newEndDate;
+        
+        emit ContractRenewed(locador, inquilino, newEndDate);
     }
+
+    function autoRenew() public {
+        require(!isTerminated, "Contrato foi encerrado.");
+
+        if (block.timestamp >= dataTerminoContrato) {
+            // Renovar contrato por mais 'duracaoContratoMeses'
+            uint256 newEndDate = block.timestamp + (duracaoContratoMeses * 30 days);
+            dataTerminoContrato = newEndDate;
+
+            emit ContractRenewed(locador, inquilino, newEndDate);
+        }
+    }
+
+    function simularPassagemDeMeses(uint256 meses) public {
+        require(msg.sender == locador, unicode"Apenas o locador pode simular o tempo.");
+        require(meses > 0, unicode"O número de meses deve ser positivo.");
+
+        // Avançar o tempo no contrato (simulado)
+        dataTerminoContrato -= meses * 30 days;
+
+        if (block.timestamp >= dataTerminoContrato) {
+            autoRenew();
+        }
+
+            // Verifique se é necessário renovar o contrato
+        if (block.timestamp >= dataTerminoContrato) {
+            autoRenew();  // Chama a renovação automática
+        }
+
+        emit TimeSimulation(meses);
+    }
+
+    function getContractEndDate() public view returns (uint256) {
+        return dataTerminoContrato;
     }
 }
