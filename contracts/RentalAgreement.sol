@@ -12,6 +12,8 @@ contract RentalAgreement {
     bool public isActive;
     uint256 public dataVencimentoAluguel;
     uint256 public dataTerminoContrato;
+    uint256 public duracaoContratoMeses;
+    uint256 public simulatedTime;
 
     event RentPaid(address indexed inquilino, uint256 amount);
     event DepositPaid(address indexed inquilino, uint256 amount);
@@ -21,14 +23,17 @@ contract RentalAgreement {
     event RentPaymentPending(address indexed inquilino, uint256 dueDate);
     event ContractExpired(address indexed locador, address indexed inquilino);
     event PaymentLate(address indexed inquilino, uint256 daysLate);
+    event TimeSimulation(uint256 simulatedTimestamp);
 
-    constructor(address _inquilino, uint256 _rentAmount, uint256 _deposit) {
+    constructor(address _inquilino, uint256 _rentAmount, uint256 _deposit, uint256 _duracaoContratoMeses) {
         locador = msg.sender;
         inquilino = _inquilino;
-        rentAmount = _rentAmount * (1 ether);  // Armazenar valores em Wei
-        deposit = _deposit * (1 ether);        // Armazenar valores em Wei
+        rentAmount = _rentAmount * (1 ether);
+        deposit = _deposit * (1 ether);
+        duracaoContratoMeses = _duracaoContratoMeses;
         isTerminated = false;
-        isActive = false;
+        simulatedTime = block.timestamp;
+        dataTerminoContrato = simulatedTime + (duracaoContratoMeses * 30 days);
     }
 
     function payRent() public payable {
@@ -97,22 +102,15 @@ contract RentalAgreement {
     address, address, uint256, uint256, bool, bool, bool, bool
     ) {
         return (
-            locador,           // Endereço do locador
-            inquilino,         // Endereço do inquilino
-            rentAmount,        // Valor do aluguel
-            deposit,           // Valor do depósito
-            isTerminated,      // Se o contrato está encerrado
-            locadorSigned,     // Se o locador já assinou
-            inquilinoSigned,   // Se o inquilino já assinou
-            isActive           // Se o contrato está ativo
+            locador,
+            inquilino,
+            rentAmount,
+            deposit,
+            isTerminated,
+            locadorSigned,
+            inquilinoSigned,
+            isActive
         );
-    }
-
-    function renovarContrato(uint256 novoPrazo) public {
-        require(msg.sender == locador || msg.sender == inquilino, unicode"Somente locador ou inquilino podem renovar o contrato.");
-        require(!isTerminated, unicode"Contrato já foi encerrado.");
-
-        emit ContractRenewed(locador, inquilino, block.timestamp + novoPrazo);
     }
 
     function configurarDataVencimento(uint256 dias) public {
@@ -127,13 +125,43 @@ contract RentalAgreement {
     }
 
     function verificarStatus() public {
-    if (block.timestamp > dataVencimentoAluguel && !isTerminated) {
-        uint256 diasAtraso = (block.timestamp - dataVencimentoAluguel) / 1 days;
-        emit PaymentLate(inquilino, diasAtraso);
+        if (simulatedTime > dataVencimentoAluguel && !isTerminated) {
+            uint256 diasAtraso = (simulatedTime - dataVencimentoAluguel) / 1 days;
+            emit PaymentLate(inquilino, diasAtraso);
+        }
+
+        if (simulatedTime > dataTerminoContrato) {
+            emit ContractExpired(locador, inquilino);
+        }
     }
-    
-    if (block.timestamp > dataTerminoContrato) {
-        emit ContractExpired(locador, inquilino);
+
+    function autoRenew() public {
+        require(!isTerminated, "Contrato foi encerrado.");
+        require(isActive, unicode"O contrato não está ativo.");  // Verifica se o contrato está ativo
+        require(isFullySigned(), unicode"O contrato precisa ser assinado por ambas as partes antes de realizar pagamentos.");
+
+        uint256 newEndDate = dataTerminoContrato + (duracaoContratoMeses * 30 days);
+        dataTerminoContrato = newEndDate;
+
+        emit ContractRenewed(locador, inquilino, newEndDate);
     }
+
+    function simularPassagemDeTempo(uint256 simulatedTimestamp) public {
+        require(msg.sender == locador, unicode"Apenas o locador pode simular o tempo.");
+        require(simulatedTimestamp > block.timestamp, unicode"A data simulada deve ser no futuro.");
+        require(!isTerminated, unicode"Contrato foi encerrado.");
+        require(isActive, unicode"O contrato não está ativo.");
+
+        simulatedTime = simulatedTimestamp;
+
+        while (simulatedTime >= dataTerminoContrato) {
+            autoRenew();
+        }
+
+        emit TimeSimulation(simulatedTimestamp);
+    }
+
+    function getContractEndDate() public view returns (uint256) {
+        return dataTerminoContrato;
     }
 }

@@ -2,8 +2,11 @@ import streamlit as st # type:ignore
 import requests # type:ignore
 import os
 import json
+import base64
+import datetime
 from dotenv import load_dotenv # type:ignore
 from web3 import Web3 # type:ignore
+from scripts.gerar_pdf_contrato import gerar_pdf_contrato
 
 load_dotenv()
 
@@ -12,6 +15,10 @@ DJANGO_API_URL = os.getenv("DJANGO_API_URL")
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
     return account.address
+
+def download_link_pdf(pdf_content, filename="contrato.pdf"):
+    b64 = base64.b64encode(pdf_content).decode()
+    return f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Baixar Contrato</a>'
 
 def api_post(endpoint, data):
     try:
@@ -54,7 +61,8 @@ page = st.sidebar.selectbox("Selecione a página",
                              "Assinar Contrato",
                              "Registrar Pagamento",
                              "Visualizar Contratos",
-                             "Encerrar Contrato"])
+                             "Encerrar Contrato",
+                             "Simular Passagem de Tempo"])
 
 if page == "Criar Contrato":
     st.title("Criar Novo Contrato")
@@ -165,7 +173,7 @@ if page == "Visualizar Contratos":
     if contracts:
         for contract in contracts:
             st.markdown(f"""
-            **Contrato {contract['id']}**  
+            ***Contrato {contract['id']}***
             - **Locador**: {contract['landlord']}  
             - **Inquilino**: {contract['tenant']}  
             - **Valor do Aluguel**: {contract['rent_amount']} ETH  
@@ -189,6 +197,10 @@ if page == "Visualizar Contratos":
                     """)
             else:
                 st.write("Nenhum evento encontrado para este contrato.")
+
+            pdf_content = gerar_pdf_contrato(contract)
+            st.button(pdf_content)
+
             st.markdown("### ")
     else:
         st.write("Nenhum contrato encontrado.")
@@ -215,3 +227,30 @@ if page == "Encerrar Contrato":
                     st.success(f"Contrato encerrado com sucesso!\nTx Hash: {result['tx_hash']}")
                 else:
                     st.error(f"Erro ao encerrar contrato: {result}")
+
+if page == "Simular Passagem de Tempo":
+    st.title("Simular Passagem de Tempo")
+
+    contract_id = st.text_input("ID do Contrato")
+    data_simulada = st.date_input("Data Simulada", value=datetime.date.today())
+    private_key = st.text_input("Chave Privada (Locador)", type="password")
+
+    if st.button("Avançar Tempo"):
+        if not contract_id:
+            st.error("ID do contrato é obrigatório.")
+        elif not private_key:
+            st.error("Chave privada é obrigatória.")
+        elif not data_simulada:
+            st.error("A data é obrigatória.")
+        else:
+            simulation_data = {
+                "simulated_date": data_simulada.strftime('%Y-%m-%d'),
+                "private_key": private_key
+            }
+
+            with st.spinner("Processando..."):
+                result, success = api_post(f"api/contracts/{contract_id}/simular_tempo/", simulation_data)
+                if success:
+                    st.success(f"Simulação completada!\nTx Hash: {result['tx_hash']}\nNova data de término: {result['end_date']}")
+                else:
+                    st.error(f"Erro ao avançar o tempo: {result}")
