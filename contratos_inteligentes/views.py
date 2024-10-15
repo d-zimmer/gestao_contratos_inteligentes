@@ -9,6 +9,7 @@ import os
 import json
 import traceback
 import datetime
+from dateutil.relativedelta import relativedelta # type:ignore
 from decimal import Decimal
 from .utils.load_contract_data import load_contract_data
 from .utils.check_connection import check_connection
@@ -70,8 +71,16 @@ def create_contract_api(request):
         signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
         tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+        
+        try:
+            start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({"error": "Formato de data inválido. Use 'YYYY-MM-DD'."}, status=400)
 
         new_contract_address = tx_receipt.contractAddress
+
+        rent_due_date = datetime.date.today() + relativedelta(months=1)
 
         RentalContract.objects.create(
             landlord=landlord,
@@ -82,18 +91,22 @@ def create_contract_api(request):
             status='pending',
             start_date=start_date,
             end_date=end_date,
+            rent_due_date=rent_due_date,
             contract_duration=contract_duration,
         )
 
         return Response({
             "message": "Contrato criado com sucesso!",
             "tx_hash": tx_hash.hex(),
-            "contract_address": new_contract_address
+            "contract_address": new_contract_address,
+            "start_date": start_date,
+            "end_date": end_date,
+            "rent_due_date": rent_due_date
         }, status=201)
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-    
+
 @api_view(['POST'])
 def sign_contract_api(request, contract_id):
     rental_contract = get_object_or_404(RentalContract, id=contract_id)
@@ -427,12 +440,17 @@ def simular_tempo(request, contract_id):
 
     try:
         contrato = RentalContract.objects.get(id=contract_id)
-        meses = request.data.get('meses')
+        simulated_date_str = request.data.get('simulated_date')
         private_key = request.data.get('private_key')
 
-        # Chamada à função simularPassagemDeMeses no contrato inteligente
+        if simulated_date_str:
+            simulated_timestamp = datetime.datetime.strptime(simulated_date_str, '%Y-%m-%d').timestamp()
+        else:
+            return Response({"error": "Data simulada não foi enviada."}, status=400)
+
+        # Chamada à função simularPassagemDeTempo no contrato inteligente
         contract_instance = web3.eth.contract(address=contrato.contract_address, abi=contract_abi)
-        tx_hash = contract_instance.functions.simularPassagemDeMeses(int(meses)).transact({
+        tx_hash = contract_instance.functions.simularPassagemDeTempo(int(simulated_timestamp)).transact({
             'from': web3.eth.account.from_key(private_key).address,
             'gas': 3000000,
             'gasPrice': web3.to_wei('20', 'gwei')
@@ -440,10 +458,20 @@ def simular_tempo(request, contract_id):
 
         web3.eth.wait_for_transaction_receipt(tx_hash)
 
-        data_termino_atualizada = contract_instance.functions.getContractEndDate().call()
-        contrato.end_date = datetime.datetime.fromtimestamp(data_termino_atualizada)
+        # Se a data simulada for maior ou igual à data de término, adiciona a duração do contrato à end_date
+        simulated_date = datetime.datetime.fromtimestamp(simulated_timestamp).date()
+        if simulated_date >= contrato.end_date:
+            contrato.end_date += relativedelta(months=contrato.contract_duration)
+
+        # Atualizar a data simulada e salvar as mudanças
+        contrato.simulated_time = simulated_date
         contrato.save()
 
-        return Response({'message': 'Tempo simulado e contrato renovado.', 'tx_hash': tx_hash.hex()})
+        return Response({
+            'message': 'Tempo simulado e contrato atualizado.',
+            'tx_hash': tx_hash.hex(),
+            'end_date': contrato.end_date,  # Data de término atualizada
+            'simulated_time': contrato.simulated_time  # Data simulada
+        })
     except Exception as e:
         return Response({'error': str(e)}, status=500)

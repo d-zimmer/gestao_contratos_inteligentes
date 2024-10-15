@@ -3,6 +3,7 @@ import requests # type:ignore
 import os
 import json
 import base64
+import datetime
 from dotenv import load_dotenv # type:ignore
 from web3 import Web3 # type:ignore
 from scripts.gerar_pdf_contrato import gerar_pdf_contrato
@@ -228,10 +229,10 @@ if page == "Encerrar Contrato":
                     st.error(f"Erro ao encerrar contrato: {result}")
 
 if page == "Simular Passagem de Tempo":
-    st.title("Simular Passagem de Meses")
+    st.title("Simular Passagem de Tempo")
 
     contract_id = st.text_input("ID do Contrato")
-    meses  = st.number_input("Avançar em meses", min_value=1, step=1)
+    data_simulada = st.date_input("Data Simulada", value=datetime.date.today())
     private_key = st.text_input("Chave Privada (Locador)", type="password")
 
     if st.button("Avançar Tempo"):
@@ -239,17 +240,17 @@ if page == "Simular Passagem de Tempo":
             st.error("ID do contrato é obrigatório.")
         elif not private_key:
             st.error("Chave privada é obrigatória.")
-        elif not meses:
-            st.error("O número de meses é obrigatório.")
+        elif not data_simulada:
+            st.error("A data é obrigatória.")
         else:
             simulation_data = {
-                "meses": meses,
+                "simulated_date": data_simulada.strftime('%Y-%m-%d'),
                 "private_key": private_key
             }
 
             with st.spinner("Processando..."):
                 result, success = api_post(f"api/contracts/{contract_id}/simular_tempo/", simulation_data)
                 if success:
-                    st.success(f"Simulação completada!\nTx Hash: {result['tx_hash']}")
+                    st.success(f"Simulação completada!\nTx Hash: {result['tx_hash']}\nNova data de término: {result['end_date']}")
                 else:
                     st.error(f"Erro ao avançar o tempo: {result}")

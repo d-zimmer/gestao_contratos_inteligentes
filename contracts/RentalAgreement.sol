@@ -13,6 +13,7 @@ contract RentalAgreement {
     uint256 public dataVencimentoAluguel;
     uint256 public dataTerminoContrato;
     uint256 public duracaoContratoMeses;
+    uint256 public simulatedTime;
 
     event RentPaid(address indexed inquilino, uint256 amount);
     event DepositPaid(address indexed inquilino, uint256 amount);
@@ -22,17 +23,17 @@ contract RentalAgreement {
     event RentPaymentPending(address indexed inquilino, uint256 dueDate);
     event ContractExpired(address indexed locador, address indexed inquilino);
     event PaymentLate(address indexed inquilino, uint256 daysLate);
-    event TimeSimulation(uint256 meses);
+    event TimeSimulation(uint256 simulatedTimestamp);
 
     constructor(address _inquilino, uint256 _rentAmount, uint256 _deposit, uint256 _duracaoContratoMeses) {
         locador = msg.sender;
         inquilino = _inquilino;
         rentAmount = _rentAmount * (1 ether);
         deposit = _deposit * (1 ether);
-        duracaoContratoMeses = _duracaoContratoMeses;  // Armazena a duração do contrato
+        duracaoContratoMeses = _duracaoContratoMeses;
         isTerminated = false;
-        isActive = false;
-        dataTerminoContrato = block.timestamp + (duracaoContratoMeses * 30 days);
+        simulatedTime = block.timestamp;
+        dataTerminoContrato = simulatedTime + (duracaoContratoMeses * 30 days);
     }
 
     function payRent() public payable {
@@ -124,58 +125,40 @@ contract RentalAgreement {
     }
 
     function verificarStatus() public {
-        if (block.timestamp > dataVencimentoAluguel && !isTerminated) {
-            uint256 diasAtraso = (block.timestamp - dataVencimentoAluguel) / 1 days;
+        if (simulatedTime > dataVencimentoAluguel && !isTerminated) {
+            uint256 diasAtraso = (simulatedTime - dataVencimentoAluguel) / 1 days;
             emit PaymentLate(inquilino, diasAtraso);
         }
-        
-        if (block.timestamp > dataTerminoContrato) {
+
+        if (simulatedTime > dataTerminoContrato) {
             emit ContractExpired(locador, inquilino);
         }
     }
 
-    function autoRenovar(uint256 durationInMonths) public {
-        require(block.timestamp > dataTerminoContrato, unicode"Contrato ainda não expirou.");
+    function autoRenew() public {
         require(!isTerminated, "Contrato foi encerrado.");
-        
-        uint256 novoPrazo = durationInMonths * 30 days;
-        uint256 newStartDate = block.timestamp;
-        uint256 newEndDate = newStartDate + novoPrazo;
+        require(isActive, unicode"O contrato não está ativo.");  // Verifica se o contrato está ativo
+        require(isFullySigned(), unicode"O contrato precisa ser assinado por ambas as partes antes de realizar pagamentos.");
 
+        uint256 newEndDate = dataTerminoContrato + (duracaoContratoMeses * 30 days);
         dataTerminoContrato = newEndDate;
-        
+
         emit ContractRenewed(locador, inquilino, newEndDate);
     }
 
-    function autoRenew() public {
-        require(!isTerminated, "Contrato foi encerrado.");
-
-        if (block.timestamp >= dataTerminoContrato) {
-            // Renovar contrato por mais 'duracaoContratoMeses'
-            uint256 newEndDate = block.timestamp + (duracaoContratoMeses * 30 days);
-            dataTerminoContrato = newEndDate;
-
-            emit ContractRenewed(locador, inquilino, newEndDate);
-        }
-    }
-
-    function simularPassagemDeMeses(uint256 meses) public {
+    function simularPassagemDeTempo(uint256 simulatedTimestamp) public {
         require(msg.sender == locador, unicode"Apenas o locador pode simular o tempo.");
-        require(meses > 0, unicode"O número de meses deve ser positivo.");
+        require(simulatedTimestamp > block.timestamp, unicode"A data simulada deve ser no futuro.");
+        require(!isTerminated, unicode"Contrato foi encerrado.");
+        require(isActive, unicode"O contrato não está ativo.");
 
-        // Avançar o tempo no contrato (simulado)
-        dataTerminoContrato -= meses * 30 days;
+        simulatedTime = simulatedTimestamp;
 
-        if (block.timestamp >= dataTerminoContrato) {
+        while (simulatedTime >= dataTerminoContrato) {
             autoRenew();
         }
 
-            // Verifique se é necessário renovar o contrato
-        if (block.timestamp >= dataTerminoContrato) {
-            autoRenew();  // Chama a renovação automática
-        }
-
-        emit TimeSimulation(meses);
+        emit TimeSimulation(simulatedTimestamp);
     }
 
     function getContractEndDate() public view returns (uint256) {

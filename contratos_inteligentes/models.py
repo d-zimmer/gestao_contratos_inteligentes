@@ -13,22 +13,24 @@ class RentalContract(models.Model):
     tenant = models.CharField(max_length=42)
     rent_amount = models.DecimalField(max_digits=15, decimal_places=2)
     deposit_amount = models.DecimalField(max_digits=15, decimal_places=2)
-    contract_address = models.CharField(max_length=42, unique=True)  # Certifique-se de que esse campo existe
+    contract_address = models.CharField(max_length=42, unique=True)
     start_date = models.DateField(default=timezone.now)
     end_date = models.DateField(null=True, blank=True)
+    rent_due_date = models.DateField(null=True, blank=True)  # Data de vencimento do aluguel
     contract_duration = models.PositiveIntegerField(help_text="Duração do contrato em meses", null=True)
-    termination_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    # termination_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     landlord_signature = models.CharField(max_length=132, blank=True)
     tenant_signature = models.CharField(max_length=132, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    simulated_time = models.DateField(default=timezone.now, null=True, blank=True)
 
     def clean(self):
         if len(self.contract_address) != 42:
             raise ValidationError('Endereço do contrato deve ter 42 caracteres.')
 
     def __str__(self):
-        return f"Contrato de {self.landlord} para {self.tenant}"
+        return f'Contrato {self.id}: {self.landlord} - {self.tenant}'
 
     def is_fully_signed(self):
         return bool(self.landlord_signature) and bool(self.tenant_signature)
@@ -39,13 +41,12 @@ class RentalContract(models.Model):
     class Meta:
         db_table = 'contratos'
 
-# Modelo para usuários (locador e inquilino)
 class User(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     is_landlord = models.BooleanField(default=False)
-    wallet_address = models.CharField(max_length=42, unique=True)  # Endereço da wallet blockchain
-    signature = models.CharField(max_length=132, blank=True)  # Assinatura digital
+    wallet_address = models.CharField(max_length=42, unique=True)
+    signature = models.CharField(max_length=132, blank=True)
 
     def clean(self):
         if len(self.wallet_address) != 42:
@@ -93,20 +94,20 @@ class ContractEvent(models.Model):
         ('pay_deposit', 'Pay Deposit'),
         ('execute', 'Execute Contract'),
         ('terminate', 'Terminate Contract'),
-        ('partial_payment', 'Partial Payment'),  # Novo tipo de evento
-        ('failure', 'Failure'),  # Falha em alguma ação
+        ('partial_payment', 'Partial Payment'),
+        ('failure', 'Failure'),
     ]
     
     contract = models.ForeignKey(RentalContract, on_delete=models.CASCADE, related_name='events')
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
     user_address = models.CharField(max_length=42)
-    event_data = models.JSONField()  # Informações adicionais do evento
+    event_data = models.JSONField()
     transaction_hash = models.CharField(max_length=66, blank=True, null=True)
     from_address = models.CharField(max_length=42, blank=True, null=True)
     gas_used = models.BigIntegerField(blank=True, null=True)
     block_number = models.BigIntegerField(blank=True, null=True)
     timestamp = models.DateTimeField(default=timezone.now)
-    detalhes = models.TextField(blank=True, null=True)  # Campo adicional para detalhes do evento
+    detalhes = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.event_type} no contrato {self.contract.id}"
