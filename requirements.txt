@@ -9,10 +9,12 @@ bitarray==2.9.2
 blinker==1.8.2
 cachetools==5.5.0
 certifi==2024.8.30
+chardet==5.2.0
 charset-normalizer==3.3.2
 ckzg==2.0.1
 click==8.1.7
 colorama==0.4.6
+coverage==7.6.3
 cytoolz==0.12.3
 Django==5.1.1
 djangorestframework==3.15.2
@@ -26,6 +28,7 @@ eth-tester==0.12.0b1
 eth-typing==5.0.0
 eth-utils==5.0.0
 eth_abi==5.1.0
+fpdf==1.7.2
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -61,6 +64,7 @@ pyunormalize==16.0.0
 pywin32==306
 referencing==0.35.1
 regex==2024.9.11
+reportlab==4.2.5
 requests==2.32.3
 rich==13.8.1
 rlp==4.0.1

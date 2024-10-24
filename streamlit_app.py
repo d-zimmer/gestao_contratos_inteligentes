@@ -184,7 +184,6 @@ if page == "Visualizar Contratos":
             """)
             st.markdown("---")
 
-            # Visualizando os eventos registrados
             events, success = api_get(f"api/contracts/{contract['id']}/events/")
             if success and events:
                 st.subheader("Eventos")
@@ -199,8 +198,13 @@ if page == "Visualizar Contratos":
                 st.write("Nenhum evento encontrado para este contrato.")
 
             pdf_content = gerar_pdf_contrato(contract)
-            st.button(pdf_content)
-
+            st.download_button(
+                label="Clique para baixar o PDF",
+                data=pdf_content,
+                file_name=f"contrato_{contract['id']}.pdf",
+                mime="application/pdf",
+                key=f"download_{contract['id']}"
+            )
             st.markdown("### ")
     else:
         st.write("Nenhum contrato encontrado.")
