@@ -88,6 +88,10 @@ contract RentalAgreement {
         } else {
             revert(unicode"Somente locador ou inquilino podem assinar o contrato.");
         }
+
+        if (isFullySigned()) {
+            isActive = true;
+        }
     }
 
     function isFullySigned() public view returns (bool) {

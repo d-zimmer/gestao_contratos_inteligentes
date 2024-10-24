@@ -8,6 +8,10 @@ STATUS_CHOICES = [
     ('terminated', 'Encerrado'),
 ]
 
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
+
 class RentalContract(models.Model):
     landlord = models.CharField(max_length=42)
     tenant = models.CharField(max_length=42)
@@ -18,16 +22,31 @@ class RentalContract(models.Model):
     end_date = models.DateField(null=True, blank=True)
     rent_due_date = models.DateField(null=True, blank=True)  # Data de vencimento do aluguel
     contract_duration = models.PositiveIntegerField(help_text="Duração do contrato em meses", null=True)
-    # termination_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('active', 'Active'), ('terminated', 'Terminated')], default='pending')
     landlord_signature = models.CharField(max_length=132, blank=True)
     tenant_signature = models.CharField(max_length=132, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     simulated_time = models.DateField(default=timezone.now, null=True, blank=True)
 
     def clean(self):
+        # Validação do comprimento dos endereços
         if len(self.contract_address) != 42:
             raise ValidationError('Endereço do contrato deve ter 42 caracteres.')
+
+        if len(self.landlord) != 42 or len(self.tenant) != 42:
+            raise ValidationError("O endereço do locador e do inquilino devem ter 42 caracteres.")
+        
+        # Verificação da data de término ser posterior à data de início
+        if self.end_date and self.end_date <= self.start_date:
+            raise ValidationError("A data de término deve ser posterior à data de início.")
+
+        # Validação do valor do aluguel e do depósito
+        if self.rent_amount <= 0:
+            raise ValidationError("O valor do aluguel deve ser maior que zero.")
+        if self.deposit_amount < 0:
+            raise ValidationError("O valor do depósito não pode ser negativo.")
+        
+        super().clean()
 
     def __str__(self):
         return f'Contrato {self.id}: {self.landlord} - {self.tenant}'
@@ -36,7 +55,7 @@ class RentalContract(models.Model):
         return bool(self.landlord_signature) and bool(self.tenant_signature)
     
     def is_contract_active(self):
-        return self.start_date <= timezone.now() <= self.end_date
+        return self.start_date <= timezone.now().date() <= self.end_date
 
     class Meta:
         db_table = 'contratos'
