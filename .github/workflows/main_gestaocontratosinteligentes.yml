@@ -13,6 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set SEPOLIA_INFURA_URL
+        run: echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> $GITHUB_ENV
+
+
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:

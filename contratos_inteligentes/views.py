@@ -63,8 +63,8 @@ def create_contract_api(request):
     private_key = request.data["private_key"]
 
     try:
-        rent_amount = int(rent_amount)
-        deposit_amount = int(deposit_amount)
+        rent_amount = web3.to_wei(int(request.data["rent_amount"]), "ether")  # Converter para WEI
+        deposit_amount = web3.to_wei(int(request.data["deposit_amount"]), "ether")  # Converter para WEI
         contract_duration = int(contract_duration)
         if rent_amount <= 0 or deposit_amount <= 0 or contract_duration <= 0:
             raise ValueError("Valores devem ser maiores que zero.")
@@ -224,7 +224,7 @@ def sign_contract_api(request, contract_id):
             {
                 "from": account_to_sign.address,
                 "nonce": nonce,
-                "gas": 300000,  # Aumentar o limite de gás para maior segurança
+                "gas": 300000,
                 "gasPrice": web3.to_wei("20", "gwei"),
             }
         )
@@ -311,7 +311,6 @@ def register_payment_api(request, contract_id):
             abi=contract_abi,
         )
 
-        # Chamar a função para verificar o estado do contrato
         try:
             contract_state = smart_contract.functions.getContractState().call()
             # print(f"Estado atual do contrato: {contract_state}")
@@ -321,7 +320,6 @@ def register_payment_api(request, contract_id):
                 {"error": f"Erro ao obter estado do contrato: {str(e)}"}, status=500
             )
 
-        # Continuar com o fluxo de pagamento após verificar o estado
         if payment_type == "Aluguel":
             tx_function = smart_contract.functions.payRent()
             expected_amount = smart_contract.functions.getRentAmount().call()
@@ -331,13 +329,8 @@ def register_payment_api(request, contract_id):
         else:
             return Response({"error": "Tipo de pagamento inválido."}, status=400)
 
-        # Converter o valor do pagamento para Wei
-        amount_in_wei = web3.to_wei(amount, "ether")
+        amount_in_wei = web3.to_wei(float(amount), "ether")
 
-        # print(f"Valor enviado: {amount_in_wei}")
-        # print(f"Valor esperado ({payment_type.lower()}): {expected_amount} Wei")
-
-        # Verificar o valor esperado diretamente no contrato
         if amount_in_wei != expected_amount:
             return Response(
                 {

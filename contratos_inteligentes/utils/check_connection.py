@@ -8,7 +8,7 @@ load_dotenv()
 
 def check_connection():
 
-    web3 = Web3(Web3.HTTPProvider(os.getenv("GANACHE_URL")))
+    web3 = Web3(Web3.HTTPProvider(os.getenv("SEPOLIA_INFURA_URL")))
 
     if web3.is_connected():
         # print("Conectado")
