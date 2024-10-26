@@ -1,13 +1,15 @@
-from dotenv import load_dotenv # type:ignore
-from web3 import Web3 # type:ignore
 import os
+
+from dotenv import load_dotenv  # type:ignore
+from web3 import Web3  # type:ignore
 
 load_dotenv()
 
+
 def check_connection():
-    
+
     web3 = Web3(Web3.HTTPProvider(os.getenv("GANACHE_URL")))
-    
+
     if web3.is_connected():
         # print("Conectado")
         return web3

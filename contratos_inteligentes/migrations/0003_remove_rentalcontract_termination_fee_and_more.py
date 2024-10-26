@@ -7,17 +7,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('contratos_inteligentes', '0002_rentalcontract_simulated_time'),
+        ("contratos_inteligentes", "0002_rentalcontract_simulated_time"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='rentalcontract',
-            name='termination_fee',
+            model_name="rentalcontract",
+            name="termination_fee",
         ),
         migrations.AlterField(
-            model_name='rentalcontract',
-            name='simulated_time',
-            field=models.DateField(blank=True, default=django.utils.timezone.now, null=True),
+            model_name="rentalcontract",
+            name="simulated_time",
+            field=models.DateField(
+                blank=True, default=django.utils.timezone.now, null=True
+            ),
         ),
     ]

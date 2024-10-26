@@ -6,13 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('contratos_inteligentes', '0003_remove_rentalcontract_termination_fee_and_more'),
+        (
+            "contratos_inteligentes",
+            "0003_remove_rentalcontract_termination_fee_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='rentalcontract',
-            name='rent_due_date',
+            model_name="rentalcontract",
+            name="rent_due_date",
             field=models.DateField(blank=True, null=True),
         ),
     ]

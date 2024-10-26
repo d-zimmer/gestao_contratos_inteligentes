@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('contratos_inteligentes', '0001_initial'),
+        ("contratos_inteligentes", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='rentalcontract',
-            name='simulated_time',
+            model_name="rentalcontract",
+            name="simulated_time",
             field=models.DateField(blank=True, null=True),
         ),
     ]

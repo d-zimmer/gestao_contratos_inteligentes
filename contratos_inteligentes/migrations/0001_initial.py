@@ -9,91 +9,208 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='RentalContract',
+            name="RentalContract",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('landlord', models.CharField(max_length=42)),
-                ('tenant', models.CharField(max_length=42)),
-                ('rent_amount', models.DecimalField(decimal_places=2, max_digits=15)),
-                ('deposit_amount', models.DecimalField(decimal_places=2, max_digits=15)),
-                ('contract_address', models.CharField(max_length=42, unique=True)),
-                ('start_date', models.DateField(default=django.utils.timezone.now)),
-                ('end_date', models.DateField(blank=True, null=True)),
-                ('contract_duration', models.PositiveIntegerField(help_text='Duração do contrato em meses', null=True)),
-                ('termination_fee', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('status', models.CharField(choices=[('pending', 'Pendente'), ('active', 'Ativo'), ('terminated', 'Encerrado')], default='pending', max_length=10)),
-                ('landlord_signature', models.CharField(blank=True, max_length=132)),
-                ('tenant_signature', models.CharField(blank=True, max_length=132)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("landlord", models.CharField(max_length=42)),
+                ("tenant", models.CharField(max_length=42)),
+                ("rent_amount", models.DecimalField(decimal_places=2, max_digits=15)),
+                (
+                    "deposit_amount",
+                    models.DecimalField(decimal_places=2, max_digits=15),
+                ),
+                ("contract_address", models.CharField(max_length=42, unique=True)),
+                ("start_date", models.DateField(default=django.utils.timezone.now)),
+                ("end_date", models.DateField(blank=True, null=True)),
+                (
+                    "contract_duration",
+                    models.PositiveIntegerField(
+                        help_text="Duração do contrato em meses", null=True
+                    ),
+                ),
+                (
+                    "termination_fee",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pendente"),
+                            ("active", "Ativo"),
+                            ("terminated", "Encerrado"),
+                        ],
+                        default="pending",
+                        max_length=10,
+                    ),
+                ),
+                ("landlord_signature", models.CharField(blank=True, max_length=132)),
+                ("tenant_signature", models.CharField(blank=True, max_length=132)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'contratos',
+                "db_table": "contratos",
             },
         ),
         migrations.CreateModel(
-            name='User',
+            name="User",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('email', models.EmailField(max_length=254, unique=True)),
-                ('is_landlord', models.BooleanField(default=False)),
-                ('wallet_address', models.CharField(max_length=42, unique=True)),
-                ('signature', models.CharField(blank=True, max_length=132)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("email", models.EmailField(max_length=254, unique=True)),
+                ("is_landlord", models.BooleanField(default=False)),
+                ("wallet_address", models.CharField(max_length=42, unique=True)),
+                ("signature", models.CharField(blank=True, max_length=132)),
             ],
             options={
-                'db_table': 'usuarios',
+                "db_table": "usuarios",
             },
         ),
         migrations.CreateModel(
-            name='Payment',
+            name="Payment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('payment_type', models.CharField(choices=[('rent', 'Aluguel'), ('deposit', 'Depósito')], max_length=10)),
-                ('payment_date', models.DateTimeField(default=django.utils.timezone.now)),
-                ('is_verified', models.BooleanField(default=False)),
-                ('transaction_hash', models.CharField(max_length=66, unique=True)),
-                ('contract', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='payments', to='contratos_inteligentes.rentalcontract')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=10)),
+                (
+                    "payment_type",
+                    models.CharField(
+                        choices=[("rent", "Aluguel"), ("deposit", "Depósito")],
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "payment_date",
+                    models.DateTimeField(default=django.utils.timezone.now),
+                ),
+                ("is_verified", models.BooleanField(default=False)),
+                ("transaction_hash", models.CharField(max_length=66, unique=True)),
+                (
+                    "contract",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="payments",
+                        to="contratos_inteligentes.rentalcontract",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'pagamento_contrato',
+                "db_table": "pagamento_contrato",
             },
         ),
         migrations.CreateModel(
-            name='ContractTermination',
+            name="ContractTermination",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('termination_date', models.DateTimeField(default=django.utils.timezone.now)),
-                ('terminated_by', models.CharField(max_length=42)),
-                ('termination_transaction_hash', models.CharField(blank=True, max_length=66, unique=True)),
-                ('contract', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='contratos_inteligentes.rentalcontract')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "termination_date",
+                    models.DateTimeField(default=django.utils.timezone.now),
+                ),
+                ("terminated_by", models.CharField(max_length=42)),
+                (
+                    "termination_transaction_hash",
+                    models.CharField(blank=True, max_length=66, unique=True),
+                ),
+                (
+                    "contract",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="contratos_inteligentes.rentalcontract",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'encerramento_contrato',
+                "db_table": "encerramento_contrato",
             },
         ),
         migrations.CreateModel(
-            name='ContractEvent',
+            name="ContractEvent",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('event_type', models.CharField(choices=[('create', 'Create Contract'), ('sign', 'Sign Contract'), ('pay_rent', 'Pay Rent'), ('pay_deposit', 'Pay Deposit'), ('execute', 'Execute Contract'), ('terminate', 'Terminate Contract'), ('partial_payment', 'Partial Payment'), ('failure', 'Failure')], max_length=20)),
-                ('user_address', models.CharField(max_length=42)),
-                ('event_data', models.JSONField()),
-                ('transaction_hash', models.CharField(blank=True, max_length=66, null=True)),
-                ('from_address', models.CharField(blank=True, max_length=42, null=True)),
-                ('gas_used', models.BigIntegerField(blank=True, null=True)),
-                ('block_number', models.BigIntegerField(blank=True, null=True)),
-                ('timestamp', models.DateTimeField(default=django.utils.timezone.now)),
-                ('detalhes', models.TextField(blank=True, null=True)),
-                ('contract', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='events', to='contratos_inteligentes.rentalcontract')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "event_type",
+                    models.CharField(
+                        choices=[
+                            ("create", "Create Contract"),
+                            ("sign", "Sign Contract"),
+                            ("pay_rent", "Pay Rent"),
+                            ("pay_deposit", "Pay Deposit"),
+                            ("execute", "Execute Contract"),
+                            ("terminate", "Terminate Contract"),
+                            ("partial_payment", "Partial Payment"),
+                            ("failure", "Failure"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("user_address", models.CharField(max_length=42)),
+                ("event_data", models.JSONField()),
+                (
+                    "transaction_hash",
+                    models.CharField(blank=True, max_length=66, null=True),
+                ),
+                (
+                    "from_address",
+                    models.CharField(blank=True, max_length=42, null=True),
+                ),
+                ("gas_used", models.BigIntegerField(blank=True, null=True)),
+                ("block_number", models.BigIntegerField(blank=True, null=True)),
+                ("timestamp", models.DateTimeField(default=django.utils.timezone.now)),
+                ("detalhes", models.TextField(blank=True, null=True)),
+                (
+                    "contract",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="events",
+                        to="contratos_inteligentes.rentalcontract",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'eventos_contrato',
+                "db_table": "eventos_contrato",
             },
         ),
     ]

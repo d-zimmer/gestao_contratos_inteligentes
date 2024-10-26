@@ -6,13 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('contratos_inteligentes', '0004_rentalcontract_rent_due_date'),
+        ("contratos_inteligentes", "0004_rentalcontract_rent_due_date"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='rentalcontract',
-            name='status',
-            field=models.CharField(choices=[('pending', 'Pending'), ('active', 'Active'), ('terminated', 'Terminated')], default='pending', max_length=10),
+            model_name="rentalcontract",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "Pending"),
+                    ("active", "Active"),
+                    ("terminated", "Terminated"),
+                ],
+                default="pending",
+                max_length=10,
+            ),
         ),
     ]
