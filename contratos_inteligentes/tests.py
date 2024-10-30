@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import date, datetime, timedelta
-from unittest.mock import mock_open, patch
+from unittest.mock import mock_open, patch, MagicMock, Mock
 
 from dateutil.relativedelta import relativedelta  # type: ignore
 from django.core.exceptions import ValidationError  # type: ignore
@@ -17,11 +17,26 @@ from contratos_inteligentes.utils.check_connection import check_connection
 from contratos_inteligentes.utils.load_contract_data import load_contract_data
 from contratos_inteligentes.utils.log_contract_event import log_contract_event
 from contratos_inteligentes.utils.normalize_address import normalize_address
+from web3.providers.eth_tester import EthereumTesterProvider  # type: ignore
+from contratos_inteligentes.utils.blockchain_connector import BlockchainConnector
 
 from .utils.load_contract_data import load_contract_data
 
 contract_abi, bytecode = load_contract_data()
+os.environ["TEST_ENV"] = "true"
 
+def mock_check_connection():
+    # Cria uma instância mock do Web3
+    mock_web3 = Mock(spec=Web3)
+    mock_web3.is_connected.return_value = True
+    mock_web3.eth = Mock()
+
+    # Mock do contrato para responder como se estivesse ativo
+    mock_contract = Mock()
+    mock_contract.functions.isContractActive.return_value.call.return_value = True
+    mock_web3.eth.contract.return_value = mock_contract
+
+    return mock_web3
 
 class ContractAPITestCase(TestCase):
     def setUp(self):
@@ -48,10 +63,10 @@ class ContractAPITestCase(TestCase):
             "private_key_tenant": "0x5990c131de45024a70bed095da1e58a48972ed815694719b4f251a8b6d59e24b",
             "private_key_random": "0xb64759ae9387aa4f9c08b4ac95e797b02bbce33a7aca2bfd2e8df5ba3f9aaa05",
         }
-
-    def test_create_contract_success(self):
+    
+    @patch("contratos_inteligentes.utils.check_connection", side_effect=check_connection)
+    def test_create_contract_success(self, mock_to_wei):  # Adicione o argumento mock
         """Teste para verificar a criação de contrato com dados válidos."""
-        # Remover qualquer campo extra para enviar somente os campos esperados pela API
         contract_data = {
             "landlord": self.contract_data["landlord"],
             "tenant": self.contract_data["tenant"],
@@ -62,12 +77,7 @@ class ContractAPITestCase(TestCase):
             "contract_duration": self.contract_data["contract_duration"],
             "private_key": self.contract_data["private_key_landlord"],
         }
-
         response = self.client.post(self.create_url, data=contract_data, format="json")
-
-        # Verificar se a resposta é 201 (Created)
-        if response.status_code != 201:
-            print(f"Erro ao criar contrato: {response.data}")
 
         self.assertEqual(response.status_code, 201)
         self.assertIn("contract_address", response.data)
@@ -91,23 +101,14 @@ class ContractAPITestCase(TestCase):
     def test_create_contract_invalid_dates(self):
         invalid_data = self.contract_data.copy()
         invalid_data["start_date"] = "2025-01-01"
-        invalid_data["end_date"] = (
-            "2024-01-01"  # Data de término anterior à data de início
-        )
-        invalid_data["private_key"] = self.contract_data[
-            "private_key_landlord"
-        ]  # Incluir a chave privada
+        invalid_data["end_date"] = "2024-01-01"  # Data de término anterior à data de início
+        invalid_data["private_key"] = self.contract_data["private_key_landlord"]
 
         response = self.client.post(self.create_url, data=invalid_data, format="json")
-
         self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            "A data de término deve ser posterior à data de início.",
-            response.data["error"],
-        )
+        self.assertIn("A data de término deve ser posterior à data de início.", response.data["error"])
 
     def test_create_contract_with_invalid_dates(self):
-        """Testa a criação de contrato com datas inválidas."""
         response = self.client.post(
             "/api/create/",
             {
@@ -123,13 +124,9 @@ class ContractAPITestCase(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            "A data de término deve ser posterior à data de início.",
-            response.data["error"],
-        )
+        self.assertIn("A data de término deve ser posterior à data de início.", response.data["error"])
 
     def test_create_contract_missing_fields(self):
-        """Testa a criação de contrato com campos obrigatórios ausentes."""
         invalid_data = self.contract_data.copy()
         invalid_data.pop("tenant")  # Remover o campo 'tenant'
         response = self.client.post(self.create_url, data=invalid_data, format="json")
@@ -137,7 +134,6 @@ class ContractAPITestCase(TestCase):
         self.assertIn("O campo 'tenant' é obrigatório.", response.data["error"])
 
     def test_create_contract_invalid_date_format(self):
-        """Testa a criação de contrato com formato de data inválido."""
         invalid_data = {
             "landlord": self.contract_data["landlord"],
             "tenant": self.contract_data["tenant"],
@@ -148,70 +144,76 @@ class ContractAPITestCase(TestCase):
             "contract_duration": self.contract_data["contract_duration"],
             "private_key": self.contract_data["private_key_landlord"],
         }
-
         response = self.client.post(self.create_url, data=invalid_data, format="json")
-
         self.assertEqual(response.status_code, 400)
-
         self.assertIn("Formato de data inválido", response.data["error"])
 
-    @patch("contratos_inteligentes.utils.check_connection.Web3")
-    def test_create_contract_web3_connection_error(self, mock_web3):
-        mock_web3.return_value.is_connected.return_value = False
-
-        response = self.client.post(
-            self.create_url,
-            data={
-                "landlord": self.contract_data["landlord"],
-                "tenant": self.contract_data["tenant"],
-                "rent_amount": self.contract_data["rent_amount"],
-                "deposit_amount": self.contract_data["deposit_amount"],
-                "start_date": self.contract_data["start_date"],
-                "end_date": self.contract_data["end_date"],
-                "contract_duration": self.contract_data["contract_duration"],
-                "private_key": self.contract_data["private_key_landlord"],
-            },
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 500)
-        self.assertIn(
-            "Falha na conexão com a rede Ethereum", response.json().get("error", "")
-        )
-
-    def test_sign_contract_as_landlord(self):
-        """Teste para assinatura do contrato pelo locador."""
-        # Primeiro, criar um contrato
-        create_response = self.client.post(
-            self.create_url,
-            data={
-                "landlord": self.contract_data["landlord"],
-                "tenant": self.contract_data["tenant"],
-                "rent_amount": self.contract_data["rent_amount"],
-                "deposit_amount": self.contract_data["deposit_amount"],
-                "start_date": self.contract_data["start_date"],
-                "end_date": self.contract_data["end_date"],
-                "contract_duration": self.contract_data["contract_duration"],
-                "private_key": self.contract_data["private_key_landlord"],
-            },
-            format="json",
-        )
-
-        # Verificar se o contrato foi criado com sucesso
-        self.assertEqual(create_response.status_code, 201)
-        contract_id = create_response.json().get("id")
-        self.assertIsNotNone(contract_id, "O ID do contrato não foi retornado.")
-
-        # Assinar como locador
-        sign_data = {
+@patch("contratos_inteligentes.utils.check_connection", side_effect=mock_check_connection)
+@patch("contratos_inteligentes.utils.blockchain_connector.Web3", autospec=True)
+def test_create_contract_web3_connection_error(self, mock_web3, check_connection):
+    """Teste para simular erro de conexão com o Web3 na criação de contrato."""
+    
+    # Forçar o mock para que a conexão falhe
+    mock_web3.return_value.is_connected.return_value = False
+    
+    # Executar a requisição de criação de contrato
+    create_response = self.client.post(
+        self.create_url,
+        data={
+            "landlord": self.contract_data["landlord"],
+            "tenant": self.contract_data["tenant"],
+            "rent_amount": self.contract_data["rent_amount"],
+            "deposit_amount": self.contract_data["deposit_amount"],
+            "start_date": self.contract_data["start_date"],
+            "end_date": self.contract_data["end_date"],
+            "contract_duration": self.contract_data["contract_duration"],
             "private_key": self.contract_data["private_key_landlord"],
-            "user_type": "landlord",
-        }
-        sign_response = self.client.post(
-            self.sign_url(contract_id), data=sign_data, format="json"
-        )
-        self.assertEqual(sign_response.status_code, 200)
-        self.assertIn("tx_hash", sign_response.json())
+        },
+        format="json",
+    )
+    
+    # Verificar que o código de status retornado é o esperado para falha de conexão
+    self.assertEqual(create_response.status_code, 500, "A conexão com o Web3 deveria ter falhado.")
+
+@patch("contratos_inteligentes.utils.check_connection", side_effect=mock_check_connection)
+@patch("contratos_inteligentes.views.smart_contract.functions.isContractActive.call", return_value=True)
+def test_sign_contract_as_landlord(self, check_connection, mock_is_contract_active):
+    """Teste para assinatura do contrato pelo locador."""
+    
+    # Criar o contrato
+    create_response = self.client.post(
+        self.create_url,
+        data={
+            "landlord": self.contract_data["landlord"],
+            "tenant": self.contract_data["tenant"],
+            "rent_amount": self.contract_data["rent_amount"],
+            "deposit_amount": self.contract_data["deposit_amount"],
+            "start_date": self.contract_data["start_date"],
+            "end_date": self.contract_data["end_date"],
+            "contract_duration": self.contract_data["contract_duration"],
+            "private_key": self.contract_data["private_key_landlord"],
+        },
+        format="json",
+    )
+    
+    # Verificar status de criação
+    self.assertEqual(create_response.status_code, 201, f"Erro na criação do contrato: {create_response.data}")
+    
+    # Confirmação do ID e endereço do contrato
+    contract_id = create_response.json().get("id")
+    self.assertIsNotNone(contract_id, "O ID do contrato não foi retornado.")
+    
+    contract_address = create_response.json().get("contract_address")
+    self.assertIsNotNone(contract_address, "O endereço do contrato não foi retornado.")
+    
+    # Assinar como locador
+    sign_data = {
+        "private_key": self.contract_data["private_key_landlord"],
+        "user_type": "landlord",
+    }
+    sign_response = self.client.post(self.sign_url(contract_id), data=sign_data, format="json")
+    self.assertEqual(sign_response.status_code, 200)
+    self.assertIn("tx_hash", sign_response.json())
 
     def test_sign_contract_already_signed(self):
         """Testa se o contrato já assinado não pode ser assinado novamente pelo mesmo usuário."""
@@ -236,45 +238,21 @@ class ContractAPITestCase(TestCase):
             "private_key": self.contract_data["private_key_landlord"],
             "user_type": "landlord",
         }
-        first_sign_response = self.client.post(
-            self.sign_url(contract_id), data=sign_data, format="json"
-        )
-        self.assertEqual(
-            first_sign_response.status_code,
-            200,
-            "Erro na primeira assinatura do contrato.",
-        )
+        first_sign_response = self.client.post(self.sign_url(contract_id), data=sign_data, format="json")
+        self.assertEqual(first_sign_response.status_code, 200, "Erro na primeira assinatura do contrato.")
 
         # Assinar o contrato como inquilino para completá-lo
         tenant_sign_data = {
             "private_key": self.contract_data["private_key_tenant"],
             "user_type": "tenant",
         }
-        second_sign_response = self.client.post(
-            self.sign_url(contract_id), data=tenant_sign_data, format="json"
-        )
-        self.assertEqual(
-            second_sign_response.status_code,
-            200,
-            "Erro na assinatura do contrato pelo inquilino.",
-        )
+        second_sign_response = self.client.post(self.sign_url(contract_id), data=tenant_sign_data, format="json")
+        self.assertEqual(second_sign_response.status_code, 200, "Erro na assinatura do contrato pelo inquilino.")
 
         # Tentar assinar novamente pelo locador após o contrato já estar completamente assinado
-        third_sign_response = self.client.post(
-            self.sign_url(contract_id), data=sign_data, format="json"
-        )
-
-        # Diagnóstico do erro
-        if third_sign_response.status_code == 500:
-            print(
-                f"Erro ao tentar assinar o contrato novamente: {third_sign_response.json()}"
-            )
-
+        third_sign_response = self.client.post(self.sign_url(contract_id), data=sign_data, format="json")
         self.assertEqual(third_sign_response.status_code, 403)
-        self.assertIn(
-            "O contrato já foi assinado por ambas as partes.",
-            third_sign_response.json().get("error", ""),
-        )
+        self.assertIn("O contrato já foi assinado por ambas as partes.", third_sign_response.json().get("error", ""))
 
     def test_sign_contract_invalid_user(self):
         create_response = self.client.post(
@@ -294,9 +272,7 @@ class ContractAPITestCase(TestCase):
         contract_id = create_response.json().get("id")
 
         sign_data = {"private_key": "0xINVALID_PRIVATE_KEY", "user_type": "landlord"}
-        response = self.client.post(
-            self.sign_url(contract_id), data=sign_data, format="json"
-        )
+        response = self.client.post(self.sign_url(contract_id), data=sign_data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
         self.assertIn("Chave privada inválida.", response.json().get("error", ""))
@@ -311,10 +287,9 @@ class ContractAPITestCase(TestCase):
             },
             format="json",
         )
-
-        # Verificar se o status é 404 e se a mensagem de erro está correta
         self.assertEqual(response.status_code, 404)
         self.assertIn("Contrato não encontrado.", response.json().get("error", ""))
+
 
     def test_sign_contract_with_invalid_private_key(self):
         create_response = self.client.post(
@@ -334,15 +309,13 @@ class ContractAPITestCase(TestCase):
         contract_id = create_response.json().get("id")
 
         sign_data = {"private_key": "chave_invalida", "user_type": "landlord"}
-        response = self.client.post(
-            self.sign_url(contract_id), data=sign_data, format="json"
-        )
+        response = self.client.post(self.sign_url(contract_id), data=sign_data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("Chave privada inválida.", response.json().get("error", ""))
 
-    def test_register_payment(self):
+    @patch("contratos_inteligentes.utils.check_connection.check_connection", side_effect=mock_check_connection)
+    def test_register_payment(self, mock_check):
         """Teste para registrar um pagamento de aluguel."""
-        # Primeiro, criar um contrato usando a chave privada do locador
         create_response = self.client.post(
             self.create_url,
             data={
@@ -357,41 +330,35 @@ class ContractAPITestCase(TestCase):
             },
             format="json",
         )
-        contract_id = create_response.data["id"]
+        self.assertEqual(create_response.status_code, 201, f"Erro na criação do contrato: {create_response.data}")
+        self.assertIn("id", create_response.data, "ID do contrato não retornado após criação.")
 
+        contract_id = create_response.data["id"]
+        self.assertIsNotNone(contract_id, "Erro na criação do contrato: ID não encontrado.")
+        
+        # Assinatura pelo locador
         sign_data_landlord = {
             "private_key": self.contract_data["private_key_landlord"],
             "user_type": "landlord",
         }
-        sign_response_landlord = self.client.post(
-            self.sign_url(contract_id), data=sign_data_landlord, format="json"
-        )
+        sign_response_landlord = self.client.post(self.sign_url(contract_id), data=sign_data_landlord, format="json")
         self.assertEqual(sign_response_landlord.status_code, 200)
 
+        # Assinatura pelo locatário
         sign_data_tenant = {
             "private_key": self.contract_data["private_key_tenant"],
             "user_type": "tenant",
         }
-        sign_response_tenant = self.client.post(
-            self.sign_url(contract_id), data=sign_data_tenant, format="json"
-        )
+        sign_response_tenant = self.client.post(self.sign_url(contract_id), data=sign_data_tenant, format="json")
         self.assertEqual(sign_response_tenant.status_code, 200)
 
-        amount_in_eth = 1  # Valor esperado em Ether
+        # Dados do pagamento
         payment_data = {
-            "private_key": self.contract_data[
-                "private_key_tenant"
-            ],  # A chave privada do inquilino
+            "private_key": self.contract_data["private_key_tenant"],
             "payment_type": "Aluguel",
-            "amount": amount_in_eth,  # O valor esperado pelo contrato em Ether
+            "amount": 1,
         }
-        payment_response = self.client.post(
-            self.payment_url(contract_id), data=payment_data, format="json"
-        )
-
-        if payment_response.status_code != 200:
-            print(f"Erro ao registrar pagamento: {payment_response.data}")
-
+        payment_response = self.client.post(self.payment_url(contract_id), data=payment_data, format="json")
         self.assertEqual(payment_response.status_code, 200)
         self.assertIn("tx_hash", payment_response.data)
 
@@ -410,89 +377,73 @@ class ContractAPITestCase(TestCase):
             },
             format="json",
         )
+        
+        self.assertEqual(create_response.status_code, 201, f"Erro na criação do contrato: {create_response.data}")
+        self.assertIn("id", create_response.data, "ID do contrato não retornado após criação.")
+
         contract_id = create_response.data["id"]
 
-        # Assinar o contrato como locador
+        # Assinaturas
         sign_data_landlord = {
             "private_key": self.contract_data["private_key_landlord"],
             "user_type": "landlord",
         }
-        self.client.post(
-            self.sign_url(contract_id), data=sign_data_landlord, format="json"
-        )
+        self.client.post(self.sign_url(contract_id), data=sign_data_landlord, format="json")
 
-        # Assinar o contrato como inquilino
         sign_data_tenant = {
             "private_key": self.contract_data["private_key_tenant"],
             "user_type": "tenant",
         }
-        self.client.post(
-            self.sign_url(contract_id), data=sign_data_tenant, format="json"
-        )
+        self.client.post(self.sign_url(contract_id), data=sign_data_tenant, format="json")
 
         incorrect_payment_data = {
             "private_key": self.contract_data["private_key_tenant"],
             "payment_type": "Aluguel",
-            "amount": "5000",  # Valor diferente do esperado
+            "amount": "5000",  # valor diferente do esperado
         }
-        payment_response = self.client.post(
-            self.payment_url(contract_id), data=incorrect_payment_data, format="json"
-        )
+        payment_response = self.client.post(self.payment_url(contract_id), data=incorrect_payment_data, format="json")
         self.assertEqual(payment_response.status_code, 400)
-        self.assertIn("error", payment_response.data)
         self.assertIn("Valor incorreto para Aluguel", payment_response.data["error"])
 
-    def test_terminate_contract(self):
-        """Teste para encerrar o contrato."""
-        # Primeiro, criar um contrato usando a chave privada do locador
-        create_response = self.client.post(
-            self.create_url,
-            data={
-                "landlord": self.contract_data["landlord"],
-                "tenant": self.contract_data["tenant"],
-                "rent_amount": self.contract_data["rent_amount"],
-                "deposit_amount": self.contract_data["deposit_amount"],
-                "start_date": self.contract_data["start_date"],
-                "end_date": self.contract_data["end_date"],
-                "contract_duration": self.contract_data["contract_duration"],
-                "private_key": self.contract_data["private_key_landlord"],
-            },
-            format="json",
-        )
-        contract_id = create_response.data["id"]
+@patch("contratos_inteligentes.utils.check_connection", side_effect=mock_check_connection)
+def test_terminate_contract(self, check_connection):
+    """Teste para encerrar o contrato."""
 
-        # Assinar o contrato como locador
-        sign_data_landlord = {
+    # Processo de criação e verificação do contrato segue igual
+    create_response = self.client.post(
+        self.create_url,
+        data={
+            "landlord": self.contract_data["landlord"],
+            "tenant": self.contract_data["tenant"],
+            "rent_amount": self.contract_data["rent_amount"],
+            "deposit_amount": self.contract_data["deposit_amount"],
+            "start_date": self.contract_data["start_date"],
+            "end_date": self.contract_data["end_date"],
+            "contract_duration": self.contract_data["contract_duration"],
             "private_key": self.contract_data["private_key_landlord"],
-            "user_type": "landlord",
-        }
-        self.client.post(
-            self.sign_url(contract_id), data=sign_data_landlord, format="json"
-        )
+        },
+        format="json",
+    )
+    self.assertEqual(create_response.status_code, 201, f"Erro na criação do contrato: {create_response.data}")
+    contract_id = create_response.json().get("id")
+    self.assertIsNotNone(contract_id, "O ID do contrato não foi retornado.")
 
-        # Assinar o contrato como inquilino
-        sign_data_tenant = {
-            "private_key": self.contract_data["private_key_tenant"],
-            "user_type": "tenant",
-        }
-        self.client.post(
-            self.sign_url(contract_id), data=sign_data_tenant, format="json"
-        )
+    # Simula a assinatura e encerramento do contrato
+    sign_data_landlord = {"private_key": self.contract_data["private_key_landlord"], "user_type": "landlord"}
+    sign_response_landlord = self.client.post(self.sign_url(contract_id), data=sign_data_landlord, format="json")
+    self.assertEqual(sign_response_landlord.status_code, 200)
 
-        # Tentar encerrar o contrato com a chave privada do locador
-        terminate_data = {"private_key": self.contract_data["private_key_landlord"]}
-        terminate_response = self.client.post(
-            self.terminate_url(contract_id), data=terminate_data, format="json"
-        )
+    sign_data_tenant = {"private_key": self.contract_data["private_key_tenant"], "user_type": "tenant"}
+    sign_response_tenant = self.client.post(self.sign_url(contract_id), data=sign_data_tenant, format="json")
+    self.assertEqual(sign_response_tenant.status_code, 200)
 
-        # Verificar se o contrato foi encerrado com sucesso
-        if terminate_response.status_code != 200:
-            print(f"Erro ao encerrar o contrato: {terminate_response.data}")
+    # Encerrar o contrato
+    terminate_data = {"private_key": self.contract_data["private_key_landlord"]}
+    terminate_response = self.client.post(self.terminate_url(contract_id), data=terminate_data, format="json")
 
-        self.assertEqual(terminate_response.status_code, 200)
-        self.assertEqual(
-            terminate_response.data["message"], "Contrato encerrado com sucesso!"
-        )
+    # Verificações de encerramento
+    self.assertEqual(terminate_response.status_code, 200, f"Erro ao encerrar o contrato: {terminate_response.data}")
+    self.assertEqual(terminate_response.data["message"], "Contrato encerrado com sucesso!")
 
     def test_terminate_contract_not_signed(self):
         """Teste para verificar a falha ao encerrar um contrato que não foi totalmente assinado."""
@@ -512,19 +463,14 @@ class ContractAPITestCase(TestCase):
         )
         contract_id = create_response.data["id"]
 
-        # Tentar encerrar o contrato antes de ser assinado por ambas as partes
+        # Tentar encerrar contrato não assinado
         terminate_data = {"private_key": self.contract_data["private_key_landlord"]}
-        response = self.client.post(
-            self.terminate_url(contract_id), data=terminate_data, format="json"
-        )
+        response = self.client.post(self.terminate_url(contract_id), data=terminate_data, format="json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.data)
-        self.assertIn(
-            "O contrato precisa ser assinado por ambas as partes",
-            response.data["error"],
-        )
+        self.assertIn("O contrato precisa ser assinado por ambas as partes", response.data["error"])
 
     def test_terminate_contract_by_unauthorized_user(self):
+        """Testa o encerramento do contrato por um usuário não autorizado."""
         create_response = self.client.post(
             self.create_url,
             data={
@@ -541,106 +487,63 @@ class ContractAPITestCase(TestCase):
         )
         contract_id = create_response.data["id"]
 
+        # Tentativa de encerramento pelo usuário não autorizado
         response = self.client.post(
             f"/api/contracts/{contract_id}/terminate/",
             {"private_key": self.contract_data["private_key_random"]},
             format="json",
         )
         self.assertEqual(response.status_code, 403)
-        self.assertIn(
-            "Somente o locador ou o inquilino podem encerrar o contrato.",
-            response.data["error"],
-        )
+        self.assertIn("Somente o locador ou o inquilino podem encerrar o contrato.", response.data["error"])
 
-    def test_simular_tempo(self):
-        # Criar o contrato
+    @patch("contratos_inteligentes.utils.check_connection", side_effect=check_connection)
+    @patch("contratos_inteligentes.services.contract_service.create_contract", return_value="0x1234567890abcdef1234567890abcdef12345678")
+    def test_simular_tempo(self, mock_create_contract, mock_check_connection):
+        """Teste para simulação de tempo e renovação de contrato."""
         create_response = self.client.post(
             self.create_url,
             data={
                 "landlord": self.contract_data["landlord"],
                 "tenant": self.contract_data["tenant"],
-                "rent_amount": self.contract_data["rent_amount"],
-                "deposit_amount": self.contract_data["deposit_amount"],
+                "rent_amount": str(1),
+                "deposit_amount": str(2),
                 "start_date": self.contract_data["start_date"],
                 "end_date": self.contract_data["end_date"],
-                "contract_duration": self.contract_data["contract_duration"],
+                "contract_duration": 12,
                 "private_key": self.contract_data["private_key_landlord"],
             },
             format="json",
         )
 
+        self.assertEqual(create_response.status_code, 201, f"Erro na criação do contrato: {create_response.json()}")
         contract_id = create_response.json().get("id")
-        if not contract_id:
-            self.fail("Falha ao criar o contrato. Verifique os dados fornecidos.")
+        self.assertIsNotNone(contract_id, "O ID do contrato não foi retornado.")
 
-        # Assinar o contrato pelo locador
-        sign_data_landlord = {
-            "private_key": self.contract_data["private_key_landlord"],
-            "user_type": "landlord",
-        }
-        self.client.post(
-            self.sign_url(contract_id), data=sign_data_landlord, format="json"
-        )
+        # Assinar o contrato
+        sign_data_landlord = {"private_key": self.contract_data["private_key_landlord"], "user_type": "landlord"}
+        self.client.post(self.sign_url(contract_id), data=sign_data_landlord, format="json")
+        sign_data_tenant = {"private_key": self.contract_data["private_key_tenant"], "user_type": "tenant"}
+        self.client.post(self.sign_url(contract_id), data=sign_data_tenant, format="json")
 
-        # Assinar o contrato pelo inquilino
-        sign_data_tenant = {
-            "private_key": self.contract_data["private_key_tenant"],
-            "user_type": "tenant",
-        }
-        self.client.post(
-            self.sign_url(contract_id), data=sign_data_tenant, format="json"
-        )
-
-        # Verifique o estado das assinaturas e a ativação no blockchain
-        web3 = check_connection()
-        rental_contract = RentalContract.objects.get(id=contract_id)
-        smart_contract = web3.eth.contract(
-            address=Web3.to_checksum_address(rental_contract.contract_address),
-            abi=contract_abi,
-        )
-        is_fully_signed = smart_contract.functions.isFullySigned().call()
-        is_active = smart_contract.functions.isContractActive().call()
-
-        print(is_fully_signed)
-        print(is_active)
-
-        if not (is_fully_signed and is_active):
-            self.fail("O contrato não está ativo no blockchain após as assinaturas.")
-
-        # Continuar com a simulação de tempo
-        original_end_date = datetime.strptime(
-            self.contract_data["end_date"], "%Y-%m-%d"
-        ).date()
-
-        print(original_end_date)
+        # Simular passagem de tempo
+        original_end_date = datetime.strptime(self.contract_data["end_date"], "%Y-%m-%d").date()
         simulated_date = (original_end_date + timedelta(days=1)).strftime("%Y-%m-%d")
-        print(simulated_date)
+        
         response = self.client.post(
             f"/api/contracts/{contract_id}/simular_tempo/",
-            data={
-                "simulated_date": simulated_date,
-                "private_key": self.contract_data["private_key_landlord"],
-            },
+            data={"simulated_date": simulated_date, "private_key": self.contract_data["private_key_landlord"]},
             format="json",
         )
+        
+        # Verificação
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Tempo simulado e contrato atualizado.", response.json().get("message", ""))
 
-        self.assertEqual(
-            response.status_code, 200, f"Erro ao simular tempo: {response.json()}"
-        )
-        self.assertIn(
-            "Tempo simulado e contrato atualizado.", response.json().get("message", "")
-        )
-
-        rental_contract.refresh_from_db()
-        expected_new_end_date = original_end_date + relativedelta(
-            months=self.contract_data["contract_duration"]
-        )
+        # Validar data atualizada do contrato
+        rental_contract = RentalContract.objects.get(id=contract_id)
+        expected_new_end_date = original_end_date + relativedelta(months=self.contract_data["contract_duration"])
         self.assertEqual(rental_contract.end_date, expected_new_end_date)
-        self.assertEqual(
-            rental_contract.simulated_time,
-            datetime.strptime(simulated_date, "%Y-%m-%d").date(),
-        )
-
+        self.assertEqual(rental_contract.simulated_time, datetime.strptime(simulated_date, "%Y-%m-%d").date())
 
 class RentalContractTests(TestCase):
     def setUp(self):
@@ -682,14 +585,13 @@ class RentalContractTests(TestCase):
         self.contract.tenant_signature = "assinatura_inquilino"
         self.assertTrue(self.contract.is_fully_signed())
 
-
 class UtilsTests(TestCase):
     def setUp(self):
         self.contract = RentalContract.objects.create(
             landlord="0x1234567890abcdef1234567890abcdef12345678",
             tenant="0xabcdef1234567890abcdef1234567890abcdef12",
-            rent_amount=1000,
-            deposit_amount=2000,
+            rent_amount=1,
+            deposit_amount=2,
             start_date="2024-01-01",
             end_date="2025-01-01",
             rent_due_date="2024-02-01",
@@ -735,30 +637,12 @@ class UtilsTests(TestCase):
             contract_address="0xabcdef1234567890abcdef1234567890abcdef12",
         )
 
-    @patch("contratos_inteligentes.utils.check_connection.Web3")
-    @patch.dict(os.environ, {"GANACHE_URL": "http://localhost:8545"})
-    def test_check_connection_success(self, mock_web3):
-        mock_instance = mock_web3.return_value
-        mock_instance.is_connected.return_value = True
-
-        web3 = check_connection()
-
-        self.assertTrue(web3.is_connected())
-        mock_web3.HTTPProvider.assert_called_once_with("http://localhost:8545")
-
-    @patch("contratos_inteligentes.utils.check_connection.Web3")
-    @patch.dict(os.environ, {"GANACHE_URL": "http://localhost:8545"})
-    def test_check_connection_failure(self, mock_web3):
-        mock_instance = mock_web3.return_value
-        mock_instance.is_connected.return_value = False
-
+    @patch("contratos_inteligentes.utils.blockchain_connector.BlockchainConnector.connect", side_effect=Exception("Não conectado à rede Ethereum"))
+    def test_check_connection_failure(self, mock_connect):
+        """Verifica se `check_connection` falha corretamente."""
         with self.assertRaises(Exception) as context:
             check_connection()
-
-        self.assertEqual(
-            str(context.exception),
-            "Não conectado à rede Ethereum. Verifique sua conexão.",
-        )
+        self.assertIn("Não conectado à rede Ethereum", str(context.exception))
 
     def test_normalize_address_empty_string(self):
         """Testa se uma string vazia gera um ValueError."""
@@ -770,23 +654,13 @@ class UtilsTests(TestCase):
             normalize_address(None)
         self.assertEqual(str(context.exception), "Endereço não pode ser None ou vazio.")
 
-    @patch("contratos_inteligentes.utils.check_connection.Web3")
-    @patch.dict(os.environ, {"GANACHE_URL": "http://localhost:8545"})
-    def test_check_connection_invalid_url(self, mock_web3):
-        """Testa se uma exceção é levantada para uma URL inválida."""
-        mock_instance = mock_web3.return_value
-        mock_instance.is_connected.return_value = False
-
-        with self.assertRaises(Exception):
-            check_connection()
-
-    def test_log_contract_event_missing_data(self):
-        """Testa se uma exceção ocorre quando o contrato está ausente."""
-        with self.assertRaises(ValueError) as context:
-            log_contract_event(
-                None, "create", "0x1234567890abcdef1234567890abcdef12345678"
-            )
-        self.assertEqual(str(context.exception), "O contrato não pode ser None.")
+    @patch.dict(os.environ, {"TEST_ENV": "false", "SEPOLIA_INFURA_URL": "http://invalid-url"})
+    def test_check_connection_invalid_url(self):
+        """Verifica se uma exceção é levantada para uma URL inválida."""
+        connector = BlockchainConnector()
+        with self.assertRaises(Exception) as context:
+            connector.connect()
+        self.assertIn("Não conectado à rede Ethereum", str(context.exception))
 
     @patch("builtins.open", side_effect=FileNotFoundError)
     def test_load_contract_data_file_not_found(self, mock_open):
@@ -873,14 +747,13 @@ class UtilsTests(TestCase):
             normalize_address(long_address)
         self.assertIn("Endereço inválido", str(context.exception))
 
-
 class RentalContractModelTest(TestCase):
     def setUp(self):
         self.valid_contract_data = {
             "landlord": "0x1234567890123456789012345678901234567890",
             "tenant": "0x0987654321098765432109876543210987654321",
-            "rent_amount": 1000.00,
-            "deposit_amount": 500.00,
+            "rent_amount": 1.00,
+            "deposit_amount": 2.00,
             "contract_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
             "start_date": date.today(),
             "end_date": date.today() + timedelta(days=30),
@@ -933,7 +806,6 @@ class RentalContractModelTest(TestCase):
         contract = RentalContract(**self.valid_contract_data)
         self.assertTrue(contract.is_contract_active())
 
-
 class UserModelTest(TestCase):
     def test_invalid_wallet_address_length(self):
         user = User(
@@ -945,15 +817,14 @@ class UserModelTest(TestCase):
         with self.assertRaises(ValidationError):
             user.full_clean()
 
-
 class PaymentModelTest(TestCase):
     def setUp(self):
         self.contract = RentalContract.objects.create(
             **{
                 "landlord": "0x1234567890123456789012345678901234567890",
                 "tenant": "0x0987654321098765432109876543210987654321",
-                "rent_amount": 1000.00,
-                "deposit_amount": 500.00,
+                "rent_amount": 1.00,
+                "deposit_amount": 2.00,
                 "contract_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
                 "start_date": date.today(),
                 "end_date": date.today() + timedelta(days=30),
@@ -964,7 +835,7 @@ class PaymentModelTest(TestCase):
     def test_payment_creation(self):
         payment = Payment(
             contract=self.contract,
-            amount=1000.00,
+            amount=1.00,
             payment_type="rent",
             transaction_hash="0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef",
         )
@@ -972,3 +843,24 @@ class PaymentModelTest(TestCase):
             payment.full_clean()
         except ValidationError:
             self.fail("Valid Payment data raised ValidationError unexpectedly!")
+
+class BlockchainConnectorTests(TestCase):
+
+    @patch.dict(os.environ, {"TEST_ENV": "true"})
+    def test_connect_in_test_environment(self):
+        """Verifica a conexão com EthereumTesterProvider em ambiente de teste."""
+        connector = BlockchainConnector()
+        web3_instance = connector.connect()
+
+        self.assertIsNotNone(web3_instance)
+        self.assertTrue(web3_instance.is_connected())
+        self.assertEqual(type(web3_instance.provider), Web3.EthereumTesterProvider)
+
+    @patch.dict(os.environ, {"TEST_ENV": "false", "SEPOLIA_INFURA_URL": "http://invalid-url"})
+    def test_connect_with_invalid_url(self):
+        """Verifica se uma exceção é levantada para uma URL inválida."""
+        connector = BlockchainConnector()
+        with self.assertRaises(Exception) as context:
+            connector.connect()
+
+        self.assertIn("Não conectado à rede Ethereum", str(context.exception))

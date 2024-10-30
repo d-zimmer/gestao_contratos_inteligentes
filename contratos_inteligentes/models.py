@@ -16,8 +16,8 @@ from django.utils import timezone
 class RentalContract(models.Model):
     landlord = models.CharField(max_length=42)
     tenant = models.CharField(max_length=42)
-    rent_amount = models.DecimalField(max_digits=15, decimal_places=2)
-    deposit_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    rent_amount = models.DecimalField(max_digits=38, decimal_places=2)
+    deposit_amount = models.DecimalField(max_digits=38, decimal_places=2)
     contract_address = models.CharField(max_length=42, unique=True)
     start_date = models.DateField(default=timezone.now)
     end_date = models.DateField(null=True, blank=True)

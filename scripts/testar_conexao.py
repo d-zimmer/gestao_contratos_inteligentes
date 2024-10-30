@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GANACHE_URL = os.getenv("GANACHE_URL")
+GANACHE_URL = os.getenv("SEPOLIA_INFURA_URL")
 web3 = Web3(Web3.HTTPProvider(GANACHE_URL))
 
 if web3.is_connected():

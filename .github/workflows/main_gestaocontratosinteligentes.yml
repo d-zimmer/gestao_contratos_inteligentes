@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,7 +15,6 @@ jobs:
 
       - name: Set SEPOLIA_INFURA_URL
         run: echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> $GITHUB_ENV
-
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -40,6 +39,30 @@ jobs:
             exit 1
           fi
 
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test  # Garante que o build só ocorre se o job de testes passar
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
       - name: Compile Solidity contract
         run: |
           source venv/bin/activate
@@ -50,12 +73,6 @@ jobs:
           source venv/bin/activate
           python manage.py makemigrations
           python manage.py migrate
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: htmlcov
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
@@ -71,11 +88,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write #This is required for requesting the JWT
+      id-token: write
 
     steps:
       - name: Download artifact from build job

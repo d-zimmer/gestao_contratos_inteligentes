@@ -121,6 +121,12 @@ def create_contract_api(request):
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
         new_contract_address = tx_receipt.contractAddress
+
+        if not new_contract_address:
+            return Response(
+                {"error": "Falha ao obter o endereço do contrato na blockchain"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         rent_due_date = start_date + relativedelta(months=1)
 
         new_contract = RentalContract.objects.create(
@@ -136,7 +142,6 @@ def create_contract_api(request):
             contract_duration=contract_duration,
         )
 
-        # Responder com sucesso
         return Response(
             {
                 "message": "Contrato criado com sucesso!",
@@ -152,7 +157,6 @@ def create_contract_api(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(["POST"])
 def sign_contract_api(request, contract_id):
