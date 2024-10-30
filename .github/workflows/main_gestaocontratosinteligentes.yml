@@ -15,7 +15,7 @@ jobs:
         image: postgres:13
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: 1952415
           POSTGRES_DB: test_db  # nome do banco de dados para testes
         options: >-
           --health-cmd="pg_isready -U postgres"
