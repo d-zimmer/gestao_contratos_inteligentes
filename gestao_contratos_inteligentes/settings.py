@@ -79,10 +79,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': '1952415',
-        'HOST': 'localhost',
+        'USER': 'postgres@gestaocontratosinteligentes',
+        'PASSWORD': 'p**lmonk3y',
+        'HOST': 'gestaocontratosinteligentes.postgres.database.azure.com',
         'PORT': '5432',
+        'OPTIONS': {
+            'sslmode': 'require',
+        }
     }
 }
 
