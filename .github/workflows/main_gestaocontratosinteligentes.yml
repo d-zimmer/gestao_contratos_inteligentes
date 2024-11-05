@@ -30,11 +30,8 @@ jobs:
 
       - name: Set environment variables for tests
         run: |
-          echo "DJANGO_DB_NAME=test_db" >> $GITHUB_ENV
-          echo "DJANGO_DB_USER=postgres" >> $GITHUB_ENV
-          echo "DJANGO_DB_PASSWORD=postgres" >> $GITHUB_ENV
-          echo "DJANGO_DB_HOST=localhost" >> $GITHUB_ENV
-          echo "DJANGO_DB_PORT=5432" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgres://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
+          echo "DJANGO_SETTINGS_MODULE=gestao_contratos_inteligentes.settings.test" >> $GITHUB_ENV
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -44,17 +41,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m venv venv
-          source venv/bin/activate
+          . venv/bin/activate
           pip install -r requirements.txt
 
       - name: Run migrations for testing
         run: |
-          source venv/bin/activate
-          python manage.py migrate --settings=myproject.settings.test
+          . venv/bin/activate
+          python manage.py migrate
 
       - name: Run tests with coverage
         run: |
-          source venv/bin/activate
+          . venv/bin/activate
           coverage run --source='.' manage.py test
           coverage report
           coverage html
@@ -64,6 +61,12 @@ jobs:
         with:
           name: coverage-report
           path: htmlcov
+
+      - name: Create .env file for deployment
+        run: |
+          echo "DJANGO_API_URL=https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/api/" > .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> .env
 
   build:
     runs-on: ubuntu-latest
@@ -103,7 +106,7 @@ jobs:
 
       - name: Package app for deployment
         run: |
-          zip -r release.zip ./* -x "venv/*"  # Exclui a pasta 'venv' para evitar excesso de tamanho no pacote
+          zip -r release.zip ./* -x "venv/*" "*.git*" "*.github*" "__pycache__/*"
         shell: bash
 
       - name: Upload build artifact
