@@ -35,7 +35,7 @@ def api_post(endpoint, data):
 
 def api_get(endpoint):
     try:
-        response = requests.get(f"{DJANGO_API_URL}{endpoint}")
+        response = requests.get(f"{DJANGO_API_URL}/{endpoint}")
         if response.status_code == 200:
             return response.json(), True
         else:

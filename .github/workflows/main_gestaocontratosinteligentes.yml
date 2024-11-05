@@ -15,8 +15,8 @@ jobs:
         image: postgres:13
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: 1952415
-          POSTGRES_DB: postgres  # nome do banco de dados para testes
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db  # Banco temporário usado apenas nos testes
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
@@ -28,8 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set SEPOLIA_INFURA_URL
-        run: echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> $GITHUB_ENV
+      - name: Set environment variables for tests
+        run: |
+          echo "DJANGO_DB_NAME=test_db" >> $GITHUB_ENV
+          echo "DJANGO_DB_USER=postgres" >> $GITHUB_ENV
+          echo "DJANGO_DB_PASSWORD=postgres" >> $GITHUB_ENV
+          echo "DJANGO_DB_HOST=localhost" >> $GITHUB_ENV
+          echo "DJANGO_DB_PORT=5432" >> $GITHUB_ENV
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -42,21 +47,18 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Set DATABASE_URL for Django
-        run: echo "DATABASE_URL=postgres://postgres:1952415@localhost:5432/test_db" >> $GITHUB_ENV
+      - name: Run migrations for testing
+        run: |
+          source venv/bin/activate
+          python manage.py migrate --settings=myproject.settings.test
 
       - name: Run tests with coverage
         run: |
           source venv/bin/activate
-          coverage run manage.py test
-          if [ $? -eq 0 ]; then
-            echo "Todos os testes passaram. Gerando relatório de cobertura em HTML..."
-            coverage html
-          else
-            echo "Alguns testes falharam. Corrija os erros e tente novamente."
-            exit 1
-          fi
-
+          coverage run --source='.' manage.py test
+          coverage report
+          coverage html
+          
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -81,43 +83,44 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Compile Solidity contract
+      - name: Compile Solidity contract (se necessário)
         run: |
           source venv/bin/activate
           python scripts/compilar_contrato.py
+        env:
+          SEPOLIA_INFURA_URL: ${{ secrets.SEPOLIA_INFURA_URL }}
 
-      - name: Apply Django migrations
+      - name: Apply Django migrations (prepare o banco para o deploy)
         run: |
           source venv/bin/activate
           python manage.py makemigrations
           python manage.py migrate
 
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+      - name: Create static files (para o caso de arquivos estáticos no Django)
+        run: |
+          source venv/bin/activate
+          python manage.py collectstatic --no-input
 
-      - name: Upload artifact for deployment jobs
+      - name: Package app for deployment
+        run: |
+          zip -r release.zip ./* -x "venv/*"  # Exclui a pasta 'venv' para evitar excesso de tamanho no pacote
+        shell: bash
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            release.zip
-            !venv/
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build
-
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write
+    needs: build  # Só executa se o job de build tiver sucesso
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: python-app
+          name: python-app  # Baixa o release.zip da fase de build
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
@@ -125,14 +128,11 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
-          allow-no-subscriptions: true
-
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Usa as credenciais do Azure armazenadas nos secrets
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'GestaoContratosInteligentes'
-          slot-name: 'Production'
+          app-name: 'GestaoContratosInteligentes'  # Nome do seu App Service no Azure
+          package: release.zip  # Define o pacote que será enviado
