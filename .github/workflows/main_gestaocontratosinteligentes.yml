@@ -9,14 +9,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:13
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db  # Banco temporário usado apenas nos testes
+          POSTGRES_DB: test_db
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
@@ -30,8 +29,12 @@ jobs:
 
       - name: Set environment variables for tests
         run: |
-          echo "DATABASE_URL=postgres://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
-          echo "DJANGO_SETTINGS_MODULE=gestao_contratos_inteligentes.settings.test" >> $GITHUB_ENV
+          echo "DJANGO_DB_NAME=test_db" >> $GITHUB_ENV
+          echo "DJANGO_DB_USER=postgres" >> $GITHUB_ENV
+          echo "DJANGO_DB_PASSWORD=postgres" >> $GITHUB_ENV
+          echo "DJANGO_DB_HOST=localhost" >> $GITHUB_ENV
+          echo "DJANGO_DB_PORT=5432" >> $GITHUB_ENV
+          echo "DJANGO_ENV=test" >> $GITHUB_ENV
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -41,36 +44,30 @@ jobs:
       - name: Install dependencies
         run: |
           python -m venv venv
-          . venv/bin/activate
+          source venv/bin/activate
           pip install -r requirements.txt
 
       - name: Run migrations for testing
         run: |
-          . venv/bin/activate
-          python manage.py migrate
+          source venv/bin/activate
+          python manage.py migrate --settings=gestao_contratos_inteligentes.settings
 
       - name: Run tests with coverage
         run: |
-          . venv/bin/activate
-          coverage run --source='.' manage.py test
+          source venv/bin/activate
+          coverage run --source='.' manage.py test --settings=gestao_contratos_inteligentes.settings
           coverage report
           coverage html
-          
+        
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: htmlcov
 
-      - name: Create .env file for deployment
-        run: |
-          echo "DJANGO_API_URL=https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/api/" > .env
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
-          echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> .env
-
   build:
     runs-on: ubuntu-latest
-    needs: test  # Garante que o build só ocorre se o job de testes passar
+    needs: test
 
     steps:
       - uses: actions/checkout@v4
@@ -93,13 +90,13 @@ jobs:
         env:
           SEPOLIA_INFURA_URL: ${{ secrets.SEPOLIA_INFURA_URL }}
 
-      - name: Apply Django migrations (prepare o banco para o deploy)
+      - name: Apply Django migrations
         run: |
           source venv/bin/activate
           python manage.py makemigrations
           python manage.py migrate
 
-      - name: Create static files (para o caso de arquivos estáticos no Django)
+      - name: Collect static files (para o caso de arquivos estáticos no Django)
         run: |
           source venv/bin/activate
           python manage.py collectstatic --no-input
@@ -117,13 +114,13 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build  # Só executa se o job de build tiver sucesso
+    needs: build
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: python-app  # Baixa o release.zip da fase de build
+          name: python-app
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
@@ -131,11 +128,10 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Usa as credenciais do Azure armazenadas nos secrets
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
         with:
-          app-name: 'GestaoContratosInteligentes'  # Nome do seu App Service no Azure
-          package: release.zip  # Define o pacote que será enviado
+          app-name: 'GestaoContratosInteligentes'
+          package: release.zip
