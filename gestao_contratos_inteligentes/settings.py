@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'contratos_inteligentes',
     'rest_framework',
+    'corsheaders',
 ]
 
 INSTALLED_APPS += [
@@ -28,7 +29,6 @@ INSTALLED_APPS += [
 
 CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
-    "https://seu-dominio.com",  # substitua pelo domínio real do seu front-end
 ]
 
 MIDDLEWARE = [
@@ -39,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'gestao_contratos_inteligentes.urls'
