@@ -83,14 +83,15 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Compile Solidity contract (se necessário)
+      - name: Set environment variables for production database
         run: |
-          source venv/bin/activate
-          python scripts/compilar_contrato.py
-        env:
-          SEPOLIA_INFURA_URL: ${{ secrets.SEPOLIA_INFURA_URL }}
+          echo "PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}" >> $GITHUB_ENV
+          echo "PROD_DB_USER=${{ secrets.PROD_DB_USER }}" >> $GITHUB_ENV
+          echo "PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}" >> $GITHUB_ENV
+          echo "PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}" >> $GITHUB_ENV
 
-      - name: Apply Django migrations
+      - name: Apply Django migrations (prepare o banco para o deploy)
         run: |
           source venv/bin/activate
           python manage.py makemigrations

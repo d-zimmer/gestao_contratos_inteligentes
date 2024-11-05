@@ -71,16 +71,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gestao_contratos_inteligentes.wsgi.application'
 
-# Configuração do Banco de Dados
 if ENVIRONMENT == "test":
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DJANGO_DB_NAME', 'test_db'),
-            'USER': os.getenv('DJANGO_DB_USER', 'postgres'),
-            'PASSWORD': os.getenv('DJANGO_DB_PASSWORD', 'postgres'),
-            'HOST': os.getenv('DJANGO_DB_HOST', 'localhost'),
-            'PORT': os.getenv('DJANGO_DB_PORT', '5432'),
+            'NAME': os.getenv('DJANGO_DB_NAME'),
+            'USER': os.getenv('DJANGO_DB_USER'),
+            'PASSWORD': os.getenv('DJANGO_DB_PASSWORD'),
+            'HOST': os.getenv('DJANGO_DB_HOST'),
+            'PORT': os.getenv('DJANGO_DB_PORT'),
         }
     }
 else:
@@ -91,11 +90,10 @@ else:
             'USER': os.getenv('PROD_DB_USER'),
             'PASSWORD': os.getenv('PROD_DB_PASSWORD'),
             'HOST': os.getenv('PROD_DB_HOST'),
-            'PORT': os.getenv('PROD_DB_PORT', '5432'),
+            'PORT': os.getenv('PROD_DB_PORT'),
         }
     }
 
-# Validação de Senha
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
