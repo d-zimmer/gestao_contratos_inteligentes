@@ -114,6 +114,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
