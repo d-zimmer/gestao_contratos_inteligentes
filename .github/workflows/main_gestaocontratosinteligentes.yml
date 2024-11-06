@@ -140,6 +140,7 @@ jobs:
         with:
           app-name: 'GestaoContratosInteligentes'
           package: release.zip
+          startup-command: 'gunicorn gestao_contratos_inteligentes.wsgi --bind=0.0.0.0:8000'
 
   deploy_streamlit:
     runs-on: ubuntu-latest
@@ -164,3 +165,4 @@ jobs:
         with:
           app-name: 'gestaocontratostela'
           package: release.zip
+          startup-command: 'streamlit run path/to/app.py --server.port=8000 --server.headless=true'

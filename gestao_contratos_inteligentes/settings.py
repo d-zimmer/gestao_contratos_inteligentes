@@ -71,7 +71,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gestao_contratos_inteligentes.wsgi.application'
 
-# Configuração do banco de dados
 if ENVIRONMENT == "test":
     DATABASES = {
         'default': {
