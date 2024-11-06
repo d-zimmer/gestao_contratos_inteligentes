@@ -9,9 +9,14 @@ ENVIRONMENT = os.getenv("DJANGO_ENV", "production")
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
 # Hosts permitidos
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", ".azurewebsites.net,localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [
+    "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
+    "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501",
+    "localhost",
+    "127.0.0.1",
+    ".azurewebsites.net"
+]
 
-# Apps instalados
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -26,8 +31,7 @@ INSTALLED_APPS = [
 
 CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
-    "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501",
-    os.getenv("DJANGO_API_URL", "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net")
+    "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501"
 ]
 
 MIDDLEWARE = [
