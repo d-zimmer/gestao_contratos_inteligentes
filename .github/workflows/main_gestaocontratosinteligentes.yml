@@ -83,13 +83,17 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Set environment variables for production database
+      - name: Set environment variables for production
         run: |
+          echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
+          echo "DJANGO_API_URL=https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/api/" >> $GITHUB_ENV
           echo "PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}" >> $GITHUB_ENV
           echo "PROD_DB_USER=${{ secrets.PROD_DB_USER }}" >> $GITHUB_ENV
           echo "PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> $GITHUB_ENV
           echo "PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}" >> $GITHUB_ENV
           echo "PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}" >> $GITHUB_ENV
+          echo "DJANGO_ALLOWED_HOSTS=.azurewebsites.net" >> $GITHUB_ENV
+          echo "DJANGO_DEBUG=True" >> $GITHUB_ENV  # Defina como True temporariamente para depuração
 
       - name: Apply Django migrations (prepare o banco para o deploy)
         run: |

@@ -5,20 +5,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Chave secreta
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-key')
-
-# Ambiente
 ENVIRONMENT = os.getenv("DJANGO_ENV", "production")
-
-# Debug
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
 # Hosts permitidos
-ALLOWED_HOSTS = [
-    '.azurewebsites.net',
-    "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
-    'localhost',
-    '127.0.0.1'
-]
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", ".azurewebsites.net,localhost,127.0.0.1").split(",")
 
 # Apps instalados
 INSTALLED_APPS = [
@@ -36,6 +27,7 @@ INSTALLED_APPS = [
 # Configurações do CORS
 CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
+    os.getenv("DJANGO_API_URL", "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net")
 ]
 
 MIDDLEWARE = [
@@ -48,7 +40,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 
 ROOT_URLCONF = 'gestao_contratos_inteligentes.urls'
 
@@ -71,6 +62,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gestao_contratos_inteligentes.wsgi.application'
 
+# Configuração do banco de dados
 if ENVIRONMENT == "test":
     DATABASES = {
         'default': {
@@ -94,6 +86,7 @@ else:
         }
     }
 
+# Validação de senha
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -109,7 +102,7 @@ USE_TZ = True
 
 # Arquivos estáticos
 STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'  # Para produção, onde coletará todos os arquivos
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
