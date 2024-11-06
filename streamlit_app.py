@@ -10,7 +10,7 @@ from scripts.gerar_pdf_contrato import gerar_pdf_contrato
 
 load_dotenv()
 
-DJANGO_API_URL = os.getenv("DJANGO_API_URL", "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net")
+DJANGO_API_URL = "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/"
 
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)

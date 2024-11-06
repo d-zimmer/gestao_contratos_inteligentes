@@ -27,6 +27,7 @@ INSTALLED_APPS = [
 # Configurações do CORS
 CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
+    "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501",
     os.getenv("DJANGO_API_URL", "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net")
 ]
 
