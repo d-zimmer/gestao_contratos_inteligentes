@@ -11,11 +11,16 @@ DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 # Hosts permitidos
 ALLOWED_HOSTS = [
     "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
+    "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/",
     "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501",
+    "gestaocontratostela-bee2cpc7gbg7hab9.brazilsouth-01.azurewebsites.net/",
+    "gestaocontratostela-bee2cpc7gbg7hab9.brazilsouth-01.azurewebsites.net",
     "localhost",
     "127.0.0.1",
     ".azurewebsites.net"
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',

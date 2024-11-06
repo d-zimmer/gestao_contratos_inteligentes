@@ -8,6 +8,9 @@ from dotenv import load_dotenv # type:ignore
 from web3 import Web3 # type:ignore
 from scripts.gerar_pdf_contrato import gerar_pdf_contrato
 
+st.set_page_config(page_title="Gestão de Contratos", layout="centered")
+os.environ["PORT"] = "443"
+
 load_dotenv()
 
 DJANGO_API_URL = "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/"
