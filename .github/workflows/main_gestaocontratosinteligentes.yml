@@ -1,4 +1,4 @@
-name: Build, Test, and Deploy Python App to Azure
+name: Deploy to Azure VM
 
 on:
   push:
@@ -95,17 +95,6 @@ jobs:
           echo "DJANGO_ALLOWED_HOSTS=.azurewebsites.net" >> $GITHUB_ENV
           echo "DJANGO_DEBUG=True" >> $GITHUB_ENV  # Defina como True temporariamente para depuração
 
-      - name: Apply Django migrations (prepare o banco para o deploy)
-        run: |
-          source venv/bin/activate
-          python manage.py makemigrations
-          python manage.py migrate
-
-      - name: Collect static files (para o caso de arquivos estáticos no Django)
-        run: |
-          source venv/bin/activate
-          python manage.py collectstatic --no-input
-
       - name: Package app for deployment
         run: |
           zip -r release.zip ./* -x "venv/*" "*.git*" "*.github*" "__pycache__/*"
@@ -127,42 +116,21 @@ jobs:
         with:
           name: python-app
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      - name: Login to Azure
-        uses: azure/login@v2
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          ssh-private-key: ${{ secrets.AZURE_SSH_PRIVATE_KEY }}
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'GestaoContratosInteligentes'
-          package: release.zip
-          startup-command: 'gunicorn gestao_contratos_inteligentes.wsgi --bind=0.0.0.0:8000'
-
-  deploy_streamlit:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Deploy Streamlit to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'gestaocontratostela'
-          package: release.zip
-          startup-command: 'streamlit run path/to/app.py --server.port=8000 --server.headless=true'
+      - name: Deploy to Azure VM
+        run: |
+          scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
+          ssh david_zimmermann@4.228.59.7 <<'EOF'
+            cd /home/david_zimmermann/
+            unzip -o release.zip
+            python3 -m venv venv  # Cria o ambiente virtual, caso não exista
+            source venv/bin/activate
+            pip install -r requirements.txt
+            python manage.py migrate
+            python manage.py collectstatic --no-input
+            sudo systemctl restart nginx  # Reinicia o Nginx, se estiver usando para servir o app
+          EOF
