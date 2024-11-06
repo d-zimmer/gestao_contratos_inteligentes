@@ -86,7 +86,7 @@ jobs:
       - name: Set environment variables for production
         run: |
           echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
-          echo "DJANGO_API_URL=https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/api/" >> $GITHUB_ENV
+          echo "DJANGO_API_URL=https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net" >> $GITHUB_ENV
           echo "PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}" >> $GITHUB_ENV
           echo "PROD_DB_USER=${{ secrets.PROD_DB_USER }}" >> $GITHUB_ENV
           echo "PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> $GITHUB_ENV
@@ -117,7 +117,7 @@ jobs:
           name: python-app
           path: release.zip
 
-  deploy_django:
+  deploy:
     runs-on: ubuntu-latest
     needs: build
 
