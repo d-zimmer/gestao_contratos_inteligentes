@@ -84,12 +84,6 @@ jobs:
           pip install -r requirements.txt
 
       - name: Set environment variables for production
-        env:
-          PROD_DB_USER: ${{ secrets.PROD_DB_USER }}
-          PROD_DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
-          PROD_DB_NAME: ${{ secrets.PROD_DB_NAME }}
-          PROD_DB_HOST: ${{ secrets.PROD_DB_HOST }}
-          PROD_DB_PORT: ${{ secrets.PROD_DB_PORT }}
         run: |
           echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
           echo "DJANGO_API_URL=https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net" >> $GITHUB_ENV
@@ -124,14 +118,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
-      
-      - name: Set environment variables for production
-        run: |
-          echo "PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}" >> $GITHUB_ENV
-          echo "PROD_DB_USER=${{ secrets.PROD_DB_USER }}" >> $GITHUB_ENV
-          echo "PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> $GITHUB_ENV
-          echo "PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}" >> $GITHUB_ENV
-          echo "PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}" >> $GITHUB_ENV        
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.3
@@ -145,19 +131,21 @@ jobs:
       - name: Deploy to Azure VM
         run: |
           scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
-          ssh david_zimmermann@4.228.59.7 <<'EOF'
-            export PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}
-            export PROD_DB_USER=${{ secrets.PROD_DB_USER }}
-            export PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
-            export PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}
-            export PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}
-            cd /home/david_zimmermann/
-            unzip -o release.zip
-            cd gestao_contratos_inteligentes/ 
-            python3 -m venv venv  # Cria o ambiente virtual, caso não exista
-            source venv/bin/activate
-            pip install -r requirements.txt
-            python manage.py migrate
-            python manage.py collectstatic --no-input
-            sudo systemctl restart nginx  # Reinicia o Nginx, se estiver usando para servir o app
-          EOF
+          ssh david_zimmermann@4.228.59.7 "
+            cd /home/david_zimmermann/ &&
+            unzip -o release.zip &&
+            cd gestao_contratos_inteligentes/ &&
+            echo 'PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}' > .env &&
+            echo 'PROD_DB_USER=${{ secrets.PROD_DB_USER }}' >> .env &&
+            echo 'PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}' >> .env &&
+            echo 'PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}' >> .env &&
+            echo 'PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}' >> .env &&
+            echo 'DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}' >> .env &&
+            echo 'DJANGO_DEBUG=True' >> .env &&
+            python3 -m venv venv &&
+            source venv/bin/activate &&
+            pip install -r requirements.txt &&
+            python manage.py migrate &&
+            python manage.py collectstatic --no-input &&
+            sudo systemctl restart nginx
+          "
