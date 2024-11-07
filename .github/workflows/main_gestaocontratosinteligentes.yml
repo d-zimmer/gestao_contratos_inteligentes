@@ -133,10 +133,13 @@ jobs:
           scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
           ssh david_zimmermann@4.228.59.7 "
             sudo apt-get update &&
-            sudo apt-get install -y unzip &&  # Remova o comentário aqui
-            cd /home/david_zimmermann/ &&
-            unzip -o release.zip &&
-            cd gestao_contratos_inteligentes/ &&
+            sudo apt-get install -y unzip &&
+            # Crie a pasta 'projetos' se ela ainda não existir
+            mkdir -p /home/david_zimmermann/projetos &&
+            # Extraia o conteúdo da release.zip diretamente na pasta 'projetos'
+            unzip -o release.zip -d /home/david_zimmermann/projetos &&
+            cd /home/david_zimmermann/projetos &&
+            # Crie o .env com as variáveis de ambiente do GitHub Secrets
             echo 'PROD_DB_NAME=\"${{ secrets.PROD_DB_NAME }}\"' > .env &&
             echo 'PROD_DB_USER=\"${{ secrets.PROD_DB_USER }}\"' >> .env &&
             echo 'PROD_DB_PASSWORD=\"${{ secrets.PROD_DB_PASSWORD }}\"' >> .env &&
@@ -144,6 +147,7 @@ jobs:
             echo 'PROD_DB_PORT=\"${{ secrets.PROD_DB_PORT }}\"' >> .env &&
             echo 'DJANGO_SECRET_KEY=\"${{ secrets.DJANGO_SECRET_KEY }}\"' >> .env &&
             echo 'DJANGO_DEBUG=True' >> .env &&
+            # Ative o ambiente virtual, instale as dependências e realize as migrações
             python3 -m venv venv &&
             source venv/bin/activate &&
             pip install -r requirements.txt &&

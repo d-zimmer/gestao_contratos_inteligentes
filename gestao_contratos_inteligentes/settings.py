@@ -4,9 +4,8 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv()  # Carrega as variáveis do arquivo .env
+load_dotenv()
 
-# Chave secreta
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-key')
 ENVIRONMENT = os.getenv("DJANGO_ENV", "production")
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
