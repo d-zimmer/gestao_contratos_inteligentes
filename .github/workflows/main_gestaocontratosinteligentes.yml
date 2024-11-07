@@ -142,6 +142,7 @@ jobs:
           ssh david_zimmermann@4.228.59.7 <<'EOF'
             cd /home/david_zimmermann/
             unzip -o release.zip
+            cd gestao_contratos_inteligentes/ 
             python3 -m venv venv  # Cria o ambiente virtual, caso não exista
             source venv/bin/activate
             pip install -r requirements.txt

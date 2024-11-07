@@ -17,7 +17,9 @@ ALLOWED_HOSTS = [
     "gestaocontratostela-bee2cpc7gbg7hab9.brazilsouth-01.azurewebsites.net",
     "localhost",
     "127.0.0.1",
-    ".azurewebsites.net"
+    ".azurewebsites.net",
+    "gestaocontratos.brazilsouth.cloudapp.azure.com",
+    "4.228.59.7"
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -36,7 +38,9 @@ INSTALLED_APPS = [
 
 CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
-    "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501"
+    "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501",
+    "gestaocontratos.brazilsouth.cloudapp.azure.com",
+    "4.228.59.7"
 ]
 
 MIDDLEWARE = [
@@ -86,15 +90,14 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('PROD_DB_NAME'),
-            'USER': os.getenv('PROD_DB_USER'),
-            'PASSWORD': os.getenv('PROD_DB_PASSWORD'),
-            'HOST': os.getenv('PROD_DB_HOST'),
-            'PORT': os.getenv('PROD_DB_PORT'),
+            'NAME': os.getenv('PROD_DB_NAME', 'gestaocontratos'),
+            'USER': os.getenv('PROD_DB_USER', 'david'),
+            'PASSWORD': os.getenv('PROD_DB_PASSWORD', 'postgres'),
+            'HOST': os.getenv('PROD_DB_HOST', 'localhost'),
+            'PORT': os.getenv('PROD_DB_PORT', '5432'),
         }
     }
 
-# Validação de senha
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},

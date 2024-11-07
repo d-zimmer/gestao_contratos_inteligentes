@@ -13,7 +13,7 @@ os.environ["PORT"] = "443"
 
 load_dotenv()
 
-DJANGO_API_URL = "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/"
+DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com"
 
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
