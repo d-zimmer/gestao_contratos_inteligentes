@@ -1,7 +1,10 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv()  # Carrega as variáveis do arquivo .env
 
 # Chave secreta
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-key')
@@ -117,3 +120,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+print("Database Settings:")
+print("PROD_DB_NAME:", os.getenv('PROD_DB_NAME'))
+print("PROD_DB_USER:", os.getenv('PROD_DB_USER'))
+print("PROD_DB_PASSWORD:", os.getenv('PROD_DB_PASSWORD'))
+print("PROD_DB_HOST:", os.getenv('PROD_DB_HOST'))
+print("PROD_DB_PORT:", os.getenv('PROD_DB_PORT'))

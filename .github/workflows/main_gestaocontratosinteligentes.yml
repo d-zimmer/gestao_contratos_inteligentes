@@ -84,6 +84,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Set environment variables for production
+        env:
+          PROD_DB_USER: ${{ secrets.PROD_DB_USER }}
+          PROD_DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+          PROD_DB_NAME: ${{ secrets.PROD_DB_NAME }}
+          PROD_DB_HOST: ${{ secrets.PROD_DB_HOST }}
+          PROD_DB_PORT: ${{ secrets.PROD_DB_PORT }}
         run: |
           echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
           echo "DJANGO_API_URL=https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net" >> $GITHUB_ENV
@@ -140,6 +146,11 @@ jobs:
         run: |
           scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
           ssh david_zimmermann@4.228.59.7 <<'EOF'
+            export PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}
+            export PROD_DB_USER=${{ secrets.PROD_DB_USER }}
+            export PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+            export PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}
+            export PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}
             cd /home/david_zimmermann/
             unzip -o release.zip
             cd gestao_contratos_inteligentes/ 
