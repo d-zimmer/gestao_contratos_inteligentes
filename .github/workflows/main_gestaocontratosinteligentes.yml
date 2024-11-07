@@ -132,6 +132,8 @@ jobs:
         run: |
           scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
           ssh david_zimmermann@4.228.59.7 "
+            sudo apt-get update &&
+            sudo apt-get install -y unzip &&  # Adiciona essa linha para instalar o unzip
             cd /home/david_zimmermann/ &&
             unzip -o release.zip &&
             cd gestao_contratos_inteligentes/ &&
