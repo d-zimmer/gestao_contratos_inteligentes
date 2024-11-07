@@ -137,12 +137,12 @@ jobs:
             cd /home/david_zimmermann/ &&
             unzip -o release.zip &&
             cd gestao_contratos_inteligentes/ &&
-            echo 'PROD_DB_NAME=${{ secrets.PROD_DB_NAME }}' > .env &&
-            echo 'PROD_DB_USER=${{ secrets.PROD_DB_USER }}' >> .env &&
-            echo 'PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}' >> .env &&
-            echo 'PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}' >> .env &&
-            echo 'PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}' >> .env &&
-            echo 'DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}' >> .env &&
+            echo 'PROD_DB_NAME="${{ secrets.PROD_DB_NAME }}"' > .env &&
+            echo 'PROD_DB_USER="${{ secrets.PROD_DB_USER }}"' >> .env &&
+            echo 'PROD_DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}"' >> .env &&
+            echo 'PROD_DB_HOST="${{ secrets.PROD_DB_HOST }}"' >> .env &&
+            echo 'PROD_DB_PORT="${{ secrets.PROD_DB_PORT }}"' >> .env &&
+            echo 'DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"' >> .env &&
             echo 'DJANGO_DEBUG=True' >> .env &&
             python3 -m venv venv &&
             source venv/bin/activate &&
