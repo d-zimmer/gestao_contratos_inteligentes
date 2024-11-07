@@ -152,5 +152,4 @@ jobs:
             python manage.py migrate &&
             python manage.py collectstatic --no-input &&
             sudo systemctl restart nginx
-            python -u scripts/compilar_contrato.py
           "
