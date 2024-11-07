@@ -92,6 +92,7 @@ jobs:
           echo "PROD_DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> $GITHUB_ENV
           echo "PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}" >> $GITHUB_ENV
           echo "PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}" >> $GITHUB_ENV
+          echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> $GITHUB_ENV
           echo "DJANGO_ALLOWED_HOSTS=.azurewebsites.net" >> $GITHUB_ENV
           echo "DJANGO_DEBUG=True" >> $GITHUB_ENV  # Defina como True temporariamente para depuração
 
@@ -134,20 +135,17 @@ jobs:
           ssh david_zimmermann@4.228.59.7 "
             sudo apt-get update &&
             sudo apt-get install -y unzip &&
-            # Crie a pasta 'projetos' se ela ainda não existir
             mkdir -p /home/david_zimmermann/projetos &&
-            # Extraia o conteúdo da release.zip diretamente na pasta 'projetos'
             unzip -o release.zip -d /home/david_zimmermann/projetos &&
             cd /home/david_zimmermann/projetos &&
-            # Crie o .env com as variáveis de ambiente do GitHub Secrets
             echo 'PROD_DB_NAME=\"${{ secrets.PROD_DB_NAME }}\"' > .env &&
             echo 'PROD_DB_USER=\"${{ secrets.PROD_DB_USER }}\"' >> .env &&
             echo 'PROD_DB_PASSWORD=\"${{ secrets.PROD_DB_PASSWORD }}\"' >> .env &&
             echo 'PROD_DB_HOST=\"${{ secrets.PROD_DB_HOST }}\"' >> .env &&
             echo 'PROD_DB_PORT=\"${{ secrets.PROD_DB_PORT }}\"' >> .env &&
             echo 'DJANGO_SECRET_KEY=\"${{ secrets.DJANGO_SECRET_KEY }}\"' >> .env &&
+            echo 'SEPOLIA_INFURA_URL=\"${{ secrets.SEPOLIA_INFURA_URL }}\"' >> .env &&
             echo 'DJANGO_DEBUG=True' >> .env &&
-            # Ative o ambiente virtual, instale as dependências e realize as migrações
             python3 -m venv venv &&
             source venv/bin/activate &&
             pip install -r requirements.txt &&

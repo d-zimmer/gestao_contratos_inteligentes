@@ -42,6 +42,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501",
     "https://gestaocontratos.brazilsouth.cloudapp.azure.com",
+    "https://gestaocontratos.brazilsouth.cloudapp.azure.com/streamlit",
     "https://4.228.59.7"
 ]
 
@@ -119,10 +120,3 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-print("Database Settings:")
-print("PROD_DB_NAME:", os.getenv('PROD_DB_NAME'))
-print("PROD_DB_USER:", os.getenv('PROD_DB_USER'))
-print("PROD_DB_PASSWORD:", os.getenv('PROD_DB_PASSWORD'))
-print("PROD_DB_HOST:", os.getenv('PROD_DB_HOST'))
-print("PROD_DB_PORT:", os.getenv('PROD_DB_PORT'))
