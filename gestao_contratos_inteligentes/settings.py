@@ -42,7 +42,6 @@ CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net:8501",
     "https://gestaocontratos.brazilsouth.cloudapp.azure.com",
-    "https://gestaocontratos.brazilsouth.cloudapp.azure.com/streamlit",
     "https://4.228.59.7"
 ]
 
