@@ -8,12 +8,15 @@ from dotenv import load_dotenv # type:ignore
 from web3 import Web3 # type:ignore
 from scripts.gerar_pdf_contrato import gerar_pdf_contrato
 
-st.set_page_config(page_title="Gestão de Contratos", layout="centered")
-# os.environ["PORT"] = "443"
+st.set_page_config(
+    page_title="Gestão de Contratos",
+    layout="centered"
+    # page_icon="path/to/your/favicon.ico"
+)
 
 load_dotenv()
 
-DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com"
+DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
@@ -57,7 +60,6 @@ def fetch_contracts():
     else:
         return []
 
-# Menu de navegação
 st.sidebar.title("Gestão de Contratos Inteligentes")
 page = st.sidebar.selectbox("Selecione a página",
                             ["Criar Contrato",
@@ -72,8 +74,8 @@ if page == "Criar Contrato":
     
     landlord = st.text_input("Endereço do Locador")
     tenant = st.text_input("Endereço do Inquilino")
-    rent_amount = st.number_input("Valor do Aluguel (ETH)", min_value=0.0, step=0.01)
-    deposit_amount = st.number_input("Valor do Depósito (ETH)", min_value=0.0, step=0.01)
+    rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1)
+    deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1)
     start_date = st.date_input("Data de Início do Contrato")
     end_date = st.date_input("Data de Término do Contrato")
     contract_duration = st.number_input("Duração do Contrato (Meses)", min_value=1, step=1)
@@ -85,8 +87,8 @@ if page == "Criar Contrato":
         elif not private_key:
             st.error("Chave privada do locador é obrigatória.")
         else:
-            # rent_amount = Web3.to_wei(rent_amount_eth, 'ether')  # Converter ETH para Wei
-            # deposit_amount = Web3.to_wei(deposit_amount_eth, 'ether')  # Converter ETH para Wei
+            rent_amount = Web3.to_wei(rent_amount, 'ether')  # Converter ETH para Wei
+            deposit_amount = Web3.to_wei(deposit_amount, 'ether')  # Converter ETH para Wei
 
             contract_data = {
                 "landlord": landlord,
