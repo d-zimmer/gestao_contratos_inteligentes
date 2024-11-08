@@ -28,8 +28,8 @@ contract RentalAgreement {
     constructor(address _inquilino, uint256 _rentAmount, uint256 _deposit, uint256 _duracaoContratoMeses) {
         locador = msg.sender;
         inquilino = _inquilino;
-        rentAmount = _rentAmount * (1 ether);
-        deposit = _deposit * (1 ether);
+        rentAmount = _rentAmount;
+        deposit = _deposit;
         duracaoContratoMeses = _duracaoContratoMeses;
         isTerminated = false;
         simulatedTime = block.timestamp;

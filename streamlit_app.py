@@ -10,8 +10,8 @@ from scripts.gerar_pdf_contrato import gerar_pdf_contrato
 
 st.set_page_config(
     page_title="Gestão de Contratos",
-    layout="centered"
-    # page_icon="path/to/your/favicon.ico"
+    layout="centered",
+    page_icon="scripts\flaticon.png"
 )
 
 load_dotenv()
@@ -87,8 +87,8 @@ if page == "Criar Contrato":
         elif not private_key:
             st.error("Chave privada do locador é obrigatória.")
         else:
-            rent_amount = Web3.to_wei(rent_amount, 'ether')  # Converter ETH para Wei
-            deposit_amount = Web3.to_wei(deposit_amount, 'ether')  # Converter ETH para Wei
+            # rent_amount = Web3.to_wei(rent_amount, 'ether')  # Converter ETH para Wei
+            # deposit_amount = Web3.to_wei(deposit_amount, 'ether')  # Converter ETH para Wei
 
             contract_data = {
                 "landlord": landlord,
