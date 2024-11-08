@@ -11,7 +11,7 @@ from scripts.gerar_pdf_contrato import gerar_pdf_contrato
 st.set_page_config(
     page_title="Gestão de Contratos",
     layout="centered",
-    page_icon="scripts\flaticon.png"
+    page_icon="scripts/flaticon.png"
 )
 
 load_dotenv()
