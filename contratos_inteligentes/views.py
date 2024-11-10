@@ -579,16 +579,17 @@ def simular_tempo(request, contract_id):
 
         # Preparar e assinar a transação para simular a passagem de tempo
         try:
-            transaction = contract_instance.functions.simularPassagemDeTempo(
-                int(simulated_timestamp)
-            ).buildTransaction(
-                {
-                    "from": web3.eth.account.from_key(private_key).address,
-                    "nonce": web3.eth.getTransactionCount(web3.eth.account.from_key(private_key).address),
-                    "gas": 3000000,
-                    "gasPrice": web3.to_wei("20", "gwei"),
-                }
-            )
+            # Configurar a transação diretamente sem o uso de buildTransaction
+            transaction = {
+                "from": web3.eth.account.from_key(private_key).address,
+                "to": contrato.contract_address,
+                "data": contract_instance.encodeABI(
+                    fn_name="simularPassagemDeTempo", args=[int(simulated_timestamp)]
+                ),
+                "nonce": web3.eth.getTransactionCount(web3.eth.account.from_key(private_key).address),
+                "gas": 3000000,
+                "gasPrice": web3.to_wei("20", "gwei"),
+            }
             
             # Assinar a transação
             signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
