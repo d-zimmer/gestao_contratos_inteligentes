@@ -568,7 +568,7 @@ def simular_tempo(request, contract_id):
         if not is_active:
             return Response({"error": "O contrato não está ativo."}, status=400)
 
-        # Construir a transação manualmente para chamar simularPassagemDeTempo
+        # Criar e assinar a transação
         try:
             transaction = {
                 "from": web3.eth.account.from_key(private_key).address,
@@ -579,11 +579,11 @@ def simular_tempo(request, contract_id):
                 "gasPrice": web3.to_wei("20", "gwei"),
             }
 
-            # Assinar e enviar a transação
+            # Assinar a transação
             signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
             tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
 
-            # Aguardar confirmação
+            # Aguardar a confirmação da transação
             web3.eth.wait_for_transaction_receipt(tx_hash)
         except Exception as e:
             return Response({"error": f"Erro ao simular tempo no contrato: {str(e)}"}, status=400)
