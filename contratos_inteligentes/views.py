@@ -540,7 +540,6 @@ def contract_events_api(request, contract_id):
     ]
     return Response(event_data)
 
-
 @api_view(["POST"])
 def simular_tempo(request, contract_id):
     web3 = check_connection()
@@ -578,18 +577,26 @@ def simular_tempo(request, contract_id):
         if not is_active:
             return Response({"error": "O contrato não está ativo."}, status=400)
 
-        # Executar a simulação de tempo
+        # Preparar e assinar a transação para simular a passagem de tempo
         try:
-            tx_hash = contract_instance.functions.simularPassagemDeTempo(
+            transaction = contract_instance.functions.simularPassagemDeTempo(
                 int(simulated_timestamp)
-            ).transact(
+            ).buildTransaction(
                 {
                     "from": web3.eth.account.from_key(private_key).address,
+                    "nonce": web3.eth.getTransactionCount(web3.eth.account.from_key(private_key).address),
                     "gas": 3000000,
                     "gasPrice": web3.to_wei("20", "gwei"),
                 }
             )
-
+            
+            # Assinar a transação
+            signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
+            
+            # Enviar a transação assinada
+            tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+            
+            # Aguardar a confirmação da transação
             web3.eth.wait_for_transaction_receipt(tx_hash)
         except Exception as e:
             return Response(
