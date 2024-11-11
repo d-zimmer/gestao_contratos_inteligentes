@@ -157,5 +157,5 @@ jobs:
               python manage.py migrate &&
               python manage.py collectstatic --no-input &&
               sudo systemctl restart django_gunicorn &&
-              sudo systemctl restart nginx &&
+              sudo systemctl restart nginx
           "
