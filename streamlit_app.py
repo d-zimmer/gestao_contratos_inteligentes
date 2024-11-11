@@ -53,7 +53,6 @@ def api_get(endpoint):
     except requests.ConnectionError:
         return "Erro de conexão com a API.", False
 
-# Função para buscar contratos
 def fetch_contracts():
     data, success = api_get("api/contracts/")
     if success:
@@ -140,7 +139,10 @@ if page == "Assinar Contrato":
                     if success:
                         st.success(f"Contrato assinado com sucesso!\nTx Hash: {result['tx_hash']}\nStatus: {result['status']}")
                     else:
-                        st.error(f"Erro ao assinar contrato: {result.get('error', result)}")
+                        if isinstance(result, str):
+                            st.error(f"Erro ao assinar contrato: {result}")
+                        else:
+                            st.error(f"Erro ao assinar contrato: {result.get('error', result)}")
             except Exception as e:
                 st.error(f"Erro ao derivar endereço da chave privada: {str(e)}")
 
