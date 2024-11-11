@@ -20,7 +20,7 @@ DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
-    st.write(user_address)
+    # st.write(account)
     return account.address
 
 def download_link_pdf(pdf_content, filename="contrato.pdf"):
@@ -133,16 +133,17 @@ if page == "Assinar Contrato":
                     "user_type": user_type_mapped,
                     "user_address": user_address
                 }
-                
+
                 with st.spinner("Processando..."):
                     result, success = api_post(f"api/contracts/{contract_id}/sign/", signature_data)
+
                     if success:
                         st.success(f"Contrato assinado com sucesso!\nTx Hash: {result['tx_hash']}\nStatus: {result['status']}")
                     else:
-                        if isinstance(result, str):
-                            st.error(f"Erro ao assinar contrato: {result}")
+                        if isinstance(result, dict):
+                            st.error(f"Erro ao assinar contrato: {result.get('error', 'Erro desconhecido')}")
                         else:
-                            st.error(f"Erro ao assinar contrato: {result.get('error', result)}")
+                            st.error(f"Erro ao assinar contrato: {result}")
             except Exception as e:
                 st.error(f"Erro ao derivar endereço da chave privada: {str(e)}")
 
