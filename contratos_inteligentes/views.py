@@ -568,19 +568,14 @@ def simular_tempo(request, contract_id):
         if not is_active:
             return Response({"error": "O contrato não está ativo."}, status=400)
 
-        # Criar a transação manualmente para chamar a função `simularPassagemDeTempo`
+        # Criar a transação com `buildTransaction`
         try:
-            # Transação manual com encodeABI para chamar `simularPassagemDeTempo`
-            transaction_data = contract_instance.encodeABI(fn_name="simularPassagemDeTempo", args=[simulated_timestamp])
-
-            transaction = {
+            transaction = contract_instance.functions.simularPassagemDeTempo(simulated_timestamp).buildTransaction({
                 "from": web3.eth.account.from_key(private_key).address,
-                "to": contrato.contract_address,
-                "data": transaction_data,
                 "nonce": web3.eth.getTransactionCount(web3.eth.account.from_key(private_key).address),
                 "gas": 3000000,
                 "gasPrice": web3.to_wei("20", "gwei"),
-            }
+            })
 
             # Assinar e enviar a transação
             signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
