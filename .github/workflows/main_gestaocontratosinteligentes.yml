@@ -95,7 +95,7 @@ jobs:
           echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> $GITHUB_ENV
           echo "GANACHE_URL=${{ secrets.GANACHE_URL }}" >> $GITHUB_ENV
           echo "DJANGO_ALLOWED_HOSTS=.azurewebsites.net" >> $GITHUB_ENV
-          echo "DJANGO_DEBUG=True" >> $GITHUB_ENV  # Defina como True temporariamente para depuração
+          echo "DJANGO_DEBUG=True" >> $GITHUB_ENV
 
       - name: Package app for deployment
         run: |
@@ -130,19 +130,19 @@ jobs:
         run: |
           ssh-keyscan -H 4.228.59.7 >> ~/.ssh/known_hosts
 
-          - name: Upload release to VM
-          run: |
-            scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
-  
-      - name: Update apt and install unzip
+      - name: Upload release to VM
+        run: |
+          scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
+
+      - name: Install unzip and update packages on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "sudo apt-get update && sudo apt-get install -y unzip"
-  
+
       - name: Unzip release on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "unzip -o /home/david_zimmermann/release.zip -d /home/david_zimmermann/projetos"
 
-      - name: Set environment variables
+      - name: Set environment variables on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "
             cat <<EOF > /home/david_zimmermann/projetos/.env
@@ -158,7 +158,7 @@ jobs:
             EOF
           "
 
-      - name: Setup virtual environment and install dependencies
+      - name: Setup virtual environment and install dependencies on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "
             cd /home/david_zimmermann/projetos &&
@@ -167,7 +167,7 @@ jobs:
             pip install -r requirements.txt
           "
 
-      - name: Run Django migrations
+      - name: Run Django migrations on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "
             cd /home/david_zimmermann/projetos &&
@@ -175,7 +175,7 @@ jobs:
             python manage.py migrate
           "
 
-      - name: Collect Django static files
+      - name: Collect Django static files on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "
             cd /home/david_zimmermann/projetos &&
@@ -183,7 +183,7 @@ jobs:
             python manage.py collectstatic --no-input
           "
 
-      - name: Restart Django and Nginx services
+      - name: Restart Django and Nginx services on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "
             sudo systemctl restart django_gunicorn &&
