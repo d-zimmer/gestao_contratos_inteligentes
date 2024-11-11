@@ -160,56 +160,59 @@ def create_contract_api(request):
 
 @api_view(["POST"])
 def sign_contract_api(request, contract_id):
-    # Recuperar o contrato do banco de dados
+
+    if not isinstance(request.data, dict):
+        return JsonResponse({"error": "Dados da requisição inválidos."}, status=400)
+
     rental_contract = RentalContract.objects.filter(id=contract_id).first()
     if not rental_contract:
         return JsonResponse({"error": "Contrato não encontrado."}, status=404)
 
     private_key = request.data.get("private_key")
-    user_type = request.data.get("user_type")  # 'landlord' ou 'tenant'
+    user_type = request.data.get("user_type")
 
-    # Verificar se os dados necessários foram fornecidos
     if not private_key or not user_type:
         return JsonResponse(
             {"error": "Chave privada e tipo de usuário são obrigatórios."}, status=400
         )
 
-    # Conectar ao Web3
-    web3 = check_connection()
+    try:
+        web3 = check_connection()
+    except Exception as e:
+        return JsonResponse(
+            {"error": "Falha ao conectar ao Web3: " + str(e)}, status=500
+        )
 
-    # Verificar a validade da chave privada
     try:
         account_to_sign = web3.eth.account.from_key(private_key)
     except ValueError:
         return JsonResponse({"error": "Chave privada inválida."}, status=400)
 
-    # Normalizar e verificar os endereços do locador e inquilino
     try:
         landlord = normalize_address(rental_contract.landlord)
         tenant = normalize_address(rental_contract.tenant)
     except ValueError as e:
         return JsonResponse({"error": str(e)}, status=400)
 
-    # Verificar o estado do contrato no blockchain
-    smart_contract = web3.eth.contract(
-        address=Web3.to_checksum_address(rental_contract.contract_address),
-        abi=contract_abi,
-    )
+    try:
+        smart_contract = web3.eth.contract(
+            address=Web3.to_checksum_address(rental_contract.contract_address),
+            abi=contract_abi,
+        )
+    except Exception as e:
+        return JsonResponse({"error": f"Erro ao carregar o contrato: {str(e)}"}, status=500)
 
-    # Verificar se o contrato está ativo e não foi encerrado
     if not smart_contract.functions.isContractActive().call():
         return JsonResponse(
             {"error": "O contrato já foi encerrado e não pode ser assinado."},
             status=403,
         )
 
-    # Verificar se o contrato já está totalmente assinado
     if smart_contract.functions.isFullySigned().call():
         return JsonResponse(
             {"error": "O contrato já foi assinado por ambas as partes."}, status=403
         )
 
-    # Validar o usuário que está tentando assinar
     if user_type == "landlord" and account_to_sign.address.lower() != landlord.lower():
         return JsonResponse(
             {"error": "Apenas o locador pode assinar como 'landlord'."}, status=403
@@ -219,11 +222,9 @@ def sign_contract_api(request, contract_id):
             {"error": "Apenas o inquilino pode assinar como 'tenant'."}, status=403
         )
 
-    # Recuperar o nonce da transação
     nonce = web3.eth.get_transaction_count(account_to_sign.address)
 
     try:
-        # Construir e assinar a transação
         transaction = smart_contract.functions.signAgreement().build_transaction(
             {
                 "from": account_to_sign.address,
@@ -233,26 +234,21 @@ def sign_contract_api(request, contract_id):
             }
         )
 
-        # Assinar e enviar a transação
         signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
         tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-        # Verificar o resultado da transação
         if tx_receipt["status"] == 1:
-            # Atualizar as assinaturas no banco de dados
             if user_type == "landlord":
                 rental_contract.landlord_signature = account_to_sign.address
             elif user_type == "tenant":
                 rental_contract.tenant_signature = account_to_sign.address
 
-            # Verificar se o contrato foi totalmente assinado
             if rental_contract.is_fully_signed():
                 rental_contract.status = "active"
 
             rental_contract.save()
 
-            # Registrar o evento de assinatura
             ContractEvent.objects.create(
                 contract=rental_contract,
                 event_type="sign",
@@ -278,7 +274,6 @@ def sign_contract_api(request, contract_id):
         return JsonResponse(
             {"error": f"Erro ao assinar o contrato: {str(e)}"}, status=500
         )
-
 
 @api_view(["POST"])
 def register_payment_api(request, contract_id):
