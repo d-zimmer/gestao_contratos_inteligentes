@@ -540,7 +540,6 @@ def contract_events_api(request, contract_id):
     ]
     return Response(event_data)
 
-
 @api_view(["POST"])
 def simular_tempo(request, contract_id):
     web3 = check_connection()

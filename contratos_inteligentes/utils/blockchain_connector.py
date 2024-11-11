@@ -44,7 +44,7 @@ class BlockchainConnector:
 
         else:
             # Conectar à rede Sepolia ou outra rede real
-            sepolia_url = os.getenv("SEPOLIA_INFURA_URL")
+            sepolia_url = os.getenv("GANACHE_URL")
             self.web3 = Web3(Web3.HTTPProvider(sepolia_url))
 
         if not self.web3.is_connected():
