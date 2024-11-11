@@ -93,6 +93,7 @@ jobs:
           echo "PROD_DB_HOST=${{ secrets.PROD_DB_HOST }}" >> $GITHUB_ENV
           echo "PROD_DB_PORT=${{ secrets.PROD_DB_PORT }}" >> $GITHUB_ENV
           echo "SEPOLIA_INFURA_URL=${{ secrets.SEPOLIA_INFURA_URL }}" >> $GITHUB_ENV
+          echo "GANACHE_URL=${{ secrets.GANACHE_URL }}" >> $GITHUB_ENV
           echo "DJANGO_ALLOWED_HOSTS=.azurewebsites.net" >> $GITHUB_ENV
           echo "DJANGO_DEBUG=True" >> $GITHUB_ENV  # Defina como True temporariamente para depuração
 
@@ -129,17 +130,22 @@ jobs:
         run: |
           ssh-keyscan -H 4.228.59.7 >> ~/.ssh/known_hosts
 
-      - name: Deploy to Azure VM
+          - name: Upload release to VM
+          run: |
+            scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
+  
+      - name: Update apt and install unzip
         run: |
-          scp release.zip david_zimmermann@4.228.59.7:/home/david_zimmermann/
-          ssh david_zimmermann@4.228.59.7 "
-            sudo apt-get update &&
-            sudo apt-get install -y unzip &&
-            mkdir -p /home/david_zimmermann/projetos &&
-            unzip -o release.zip -d /home/david_zimmermann/projetos &&
-            cd /home/david_zimmermann/projetos &&
+          ssh david_zimmermann@4.228.59.7 "sudo apt-get update && sudo apt-get install -y unzip"
+  
+      - name: Unzip release on VM
+        run: |
+          ssh david_zimmermann@4.228.59.7 "unzip -o /home/david_zimmermann/release.zip -d /home/david_zimmermann/projetos"
 
-            cat <<EOF > .env
+      - name: Set environment variables
+        run: |
+          ssh david_zimmermann@4.228.59.7 "
+            cat <<EOF > /home/david_zimmermann/projetos/.env
             PROD_DB_NAME='${{ secrets.PROD_DB_NAME }}'
             PROD_DB_USER='${{ secrets.PROD_DB_USER }}'
             PROD_DB_PASSWORD='${{ secrets.PROD_DB_PASSWORD }}'
@@ -150,12 +156,36 @@ jobs:
             GANACHE_URL='${{ secrets.GANACHE_URL }}'
             DJANGO_DEBUG=True
             EOF
+          "
 
-              python3 -m venv venv &&
-              source venv/bin/activate &&
-              pip install -r requirements.txt &&
-              python manage.py migrate &&
-              python manage.py collectstatic --no-input &&
-              sudo systemctl restart django_gunicorn &&
-              sudo systemctl restart nginx
+      - name: Setup virtual environment and install dependencies
+        run: |
+          ssh david_zimmermann@4.228.59.7 "
+            cd /home/david_zimmermann/projetos &&
+            python3 -m venv venv &&
+            source venv/bin/activate &&
+            pip install -r requirements.txt
+          "
+
+      - name: Run Django migrations
+        run: |
+          ssh david_zimmermann@4.228.59.7 "
+            cd /home/david_zimmermann/projetos &&
+            source venv/bin/activate &&
+            python manage.py migrate
+          "
+
+      - name: Collect Django static files
+        run: |
+          ssh david_zimmermann@4.228.59.7 "
+            cd /home/david_zimmermann/projetos &&
+            source venv/bin/activate &&
+            python manage.py collectstatic --no-input
+          "
+
+      - name: Restart Django and Nginx services
+        run: |
+          ssh david_zimmermann@4.228.59.7 "
+            sudo systemctl restart django_gunicorn &&
+            sudo systemctl restart nginx
           "
