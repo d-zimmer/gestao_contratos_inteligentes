@@ -553,40 +553,48 @@ def simular_tempo(request, contract_id):
             return Response({"error": "Data simulada não foi enviada."}, status=400)
 
         try:
-            simulated_timestamp = int(datetime.datetime.strptime(simulated_date_str, "%Y-%m-%d").timestamp())
+            simulated_timestamp = datetime.datetime.strptime(
+                simulated_date_str, "%Y-%m-%d"
+            ).timestamp()
             simulated_date = datetime.datetime.fromtimestamp(simulated_timestamp).date()
         except ValueError:
-            return Response({"error": "Formato de data inválido. Use o formato 'YYYY-MM-DD'."}, status=400)
+            return Response(
+                {"error": "Formato de data inválido. Use o formato 'YYYY-MM-DD'."},
+                status=400,
+            )
 
         if simulated_date < datetime.date.today():
-            return Response({"error": "A data simulada deve ser no futuro."}, status=400)
+            return Response(
+                {"error": "A data simulada deve ser no futuro."}, status=400
+            )
 
-        contract_instance = web3.eth.contract(address=contrato.contract_address, abi=contract_abi)
+        contract_instance = web3.eth.contract(
+            address=contrato.contract_address, abi=contract_abi
+        )
 
         # Verificar se o contrato está ativo
         is_active = contract_instance.functions.isContractActive().call()
         if not is_active:
             return Response({"error": "O contrato não está ativo."}, status=400)
 
-        # Criar a transação com `buildTransaction`
+        # Executar a simulação de tempo
         try:
-            transaction = contract_instance.functions.simularPassagemDeTempo(simulated_timestamp).buildTransaction({
-                "from": web3.eth.account.from_key(private_key).address,
-                "nonce": web3.eth.getTransactionCount(web3.eth.account.from_key(private_key).address),
-                "gas": 3000000,
-                "gasPrice": web3.to_wei("20", "gwei"),
-            })
+            tx_hash = contract_instance.functions.simularPassagemDeTempo(
+                int(simulated_timestamp)
+            ).transact(
+                {
+                    "from": web3.eth.account.from_key(private_key).address,
+                    "gas": 3000000,
+                    "gasPrice": web3.to_wei("20", "gwei"),
+                }
+            )
 
-            # Assinar e enviar a transação
-            signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
-            tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
-
-            # Aguardar a confirmação da transação
             web3.eth.wait_for_transaction_receipt(tx_hash)
         except Exception as e:
-            return Response({"error": f"Erro ao simular tempo no contrato: {str(e)}"}, status=400)
+            return Response(
+                {"error": f"Erro ao simular tempo no contrato: {str(e)}"}, status=400
+            )
 
-        # Atualizar a data de término se necessário
         if simulated_date >= contrato.end_date:
             contrato.end_date += relativedelta(months=contrato.contract_duration)
 
