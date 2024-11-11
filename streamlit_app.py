@@ -20,6 +20,7 @@ DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
+    st.write(user_address)
     return account.address
 
 def download_link_pdf(pdf_content, filename="contrato.pdf"):
