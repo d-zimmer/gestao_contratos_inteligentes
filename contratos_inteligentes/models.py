@@ -77,26 +77,16 @@ class RentalContract(models.Model):
     class Meta:
         db_table = "contratos"
 
-
-class User(models.Model):
+class Usuario(models.Model):
     login = models.CharField(max_length=100, unique=True)
     email = models.EmailField(blank=True, null=True)
     is_landlord = models.BooleanField(default=False)
     id_account = models.TextField(blank=True, null=True)
     wallet_address = models.CharField(max_length=42, blank=True, null=True)
 
-    def clean(self):
-        if len(self.wallet_address) != 42:
-            raise ValidationError("Endereço da wallet deve ter 42 caracteres.")
-
-    def __str__(self):
-        return self.name
-
     class Meta:
-        db_table = "usuarios"
+        db_table = 'usuarios'
 
-
-# Modelo para pagamentos de aluguel e depósito
 class Payment(models.Model):
     contract = models.ForeignKey(
         RentalContract, on_delete=models.CASCADE, related_name="payments"
