@@ -615,10 +615,13 @@ def simular_tempo(request, contract_id):
 
 def login(request):
     if request.method == "POST":
-        data = request.json()
-        login = data.get("login")
-
         try:
+            data = json.loads(request.body)
+            login = data.get("login")
+
+            if not login:
+                return JsonResponse({"success": False, "error": "Login é obrigatório"}, status=400)
+
             usuario = Usuario.objects.get(login=login)
             return JsonResponse({
                 "success": True,
@@ -633,4 +636,6 @@ def login(request):
             })
         except Usuario.DoesNotExist:
             return JsonResponse({"success": False, "error": "Usuário não encontrado"}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "Erro ao decodificar JSON"}, status=400)
     return JsonResponse({"error": "Método não permitido"}, status=405)

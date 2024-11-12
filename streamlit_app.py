@@ -17,14 +17,11 @@ load_dotenv()
 
 DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
-# Verificação inicial de login na sessão
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
 
-# Função para exibir a página de login
 def show_login_page():
     st.title("Login")
-    # Define uma chave única e estática para o campo de login
     login = st.text_input("Login", key="unique_login_key")
 
     if st.button("Entrar"):
@@ -37,11 +34,10 @@ def show_login_page():
                 st.success("Login realizado com sucesso!")
                 st.session_state["user_data"] = user_data
                 st.session_state["is_logged_in"] = True
-                st.experimental_rerun()  # Atualiza a página após o login
+                st.experimental_rerun()
             else:
                 st.error("Erro ao fazer login: Usuário não encontrado.")
 
-# Função para chamada da API POST
 def api_post(endpoint, data):
     try:
         response = requests.post(f"{DJANGO_API_URL}{endpoint}", json=data)
@@ -55,7 +51,6 @@ def api_post(endpoint, data):
     except requests.ConnectionError:
         return "Erro de conexão com a API.", False
 
-# Exiba a página de login apenas se o usuário não estiver logado
 if not st.session_state["is_logged_in"]:
     show_login_page()
 else:
