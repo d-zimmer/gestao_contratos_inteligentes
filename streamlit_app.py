@@ -17,6 +17,15 @@ load_dotenv()
 
 DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
+def get_address_from_private_key(private_key):
+    account = Web3().eth.account.from_key(private_key)
+    return account.address
+
+def download_link_pdf(pdf_content, filename="contrato.pdf"):
+    b64 = base64.b64encode(pdf_content).decode()
+    return f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Baixar Contrato</a>'
+
+
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
 
@@ -29,6 +38,7 @@ def show_login_page():
             st.error("Login é obrigatório.")
         else:
             login_data = {"login": login}
+            st.write(f"Login enviado: {login_data}")  # Verifique o valor de login
             response, success = api_post("api/login/", login_data)
             if success:
                 st.success("Login realizado com sucesso!")
@@ -50,6 +60,26 @@ def api_post(endpoint, data):
                 return response.text, False
     except requests.ConnectionError:
         return "Erro de conexão com a API.", False
+    
+def api_get(endpoint):
+    try:
+        response = requests.get(f"{DJANGO_API_URL}/{endpoint}")
+        if response.status_code == 200:
+            return response.json(), True
+        else:
+            try:
+                return response.json(), False
+            except ValueError:
+                return response.text, False
+    except requests.ConnectionError:
+        return "Erro de conexão com a API.", False
+
+def fetch_contracts():
+    data, success = api_get("api/contracts/")
+    if success:
+        return data
+    else:
+        return []
 
 if not st.session_state["is_logged_in"]:
     show_login_page()

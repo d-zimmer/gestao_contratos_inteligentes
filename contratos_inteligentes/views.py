@@ -5,6 +5,7 @@ import traceback
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta  # type:ignore
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse  # type:ignore
 from django.shortcuts import get_object_or_404  # type:ignore
 from django.utils import timezone  # type:ignore
@@ -613,6 +614,7 @@ def simular_tempo(request, contract_id):
     except Exception as e:
         return Response({"error": f"Erro ao simular tempo: {str(e)}"}, status=400)
 
+@csrf_exempt
 def login(request):
     if request.method == "POST":
         try:
@@ -629,7 +631,9 @@ def login(request):
                 "user_id": usuario.id
             })
         except Usuario.DoesNotExist:
+            print(f"Usuário {login} não encontrado no banco de dados")
             return JsonResponse({"success": False, "error": "Usuário não encontrado"}, status=404)
         except json.JSONDecodeError:
+            print("Erro ao decodificar JSON")
             return JsonResponse({"success": False, "error": "Erro ao decodificar JSON"}, status=400)
     return JsonResponse({"error": "Método não permitido"}, status=405)
