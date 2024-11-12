@@ -79,6 +79,11 @@ class Usuario(models.Model):
     id_account = models.TextField(blank=True, null=True)
     wallet_address = models.CharField(max_length=42, blank=True, null=True)
 
+    def clean(self):
+        # Validação do comprimento do wallet_address
+        if self.wallet_address and len(self.wallet_address) != 42:
+            raise ValidationError("O endereço da carteira deve ter exatamente 42 caracteres.")
+
     class Meta:
         db_table = 'usuarios_contratos'
 
