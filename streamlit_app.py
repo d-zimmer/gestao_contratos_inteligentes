@@ -22,7 +22,7 @@ if "is_logged_in" not in st.session_state:
 
 def show_login_page():
     st.title("Login")
-    login = st.text_input("Login")  # Mudança para 'login'
+    login = st.text_input("Login", key="login_input")
 
     if st.button("Entrar"):
         if not login:
@@ -34,7 +34,7 @@ def show_login_page():
                 st.success("Login realizado com sucesso!")
                 st.session_state["user_data"] = user_data
                 st.session_state["is_logged_in"] = True
-                st.experimental_rerun()
+                st.experimental_rerun()  # Atualiza a página após o login
             else:
                 st.error("Erro ao fazer login: Usuário não encontrado.")
 
