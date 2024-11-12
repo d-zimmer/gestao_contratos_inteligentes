@@ -79,11 +79,11 @@ class RentalContract(models.Model):
 
 
 class User(models.Model):
-    name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    login = models.CharField(max_length=100, unique=True)
+    email = models.EmailField(blank=True, null=True)
     is_landlord = models.BooleanField(default=False)
-    wallet_address = models.CharField(max_length=42, unique=True)
-    signature = models.CharField(max_length=132, blank=True)
+    id_account = models.TextField(blank=True, null=True)
+    wallet_address = models.CharField(max_length=42, blank=True, null=True)
 
     def clean(self):
         if len(self.wallet_address) != 42:
@@ -162,13 +162,3 @@ class ContractEvent(models.Model):
 
     class Meta:
         db_table = "eventos_contrato"
-
-class Usuario(models.Model):
-    login = models.CharField(max_length=100, unique=True)
-    email = models.EmailField(blank=True, null=True)
-    is_landlord = models.BooleanField(default=False)
-    id_account = models.TextField(blank=True, null=True)
-    wallet_address = models.CharField(max_length=42, blank=True, null=True)
-
-    class Meta:
-        db_table = 'usuarios'  # Define o nome da tabela para 'usuarios'
