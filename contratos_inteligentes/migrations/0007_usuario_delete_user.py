@@ -35,7 +35,4 @@ class Migration(migrations.Migration):
                 "db_table": "usuarios",
             },
         ),
-        migrations.DeleteModel(
-            name="User",
-        ),
     ]
