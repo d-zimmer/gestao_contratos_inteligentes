@@ -80,7 +80,7 @@ class Usuario(models.Model):
     wallet_address = models.CharField(max_length=42, blank=True, null=True)
 
     class Meta:
-        db_table = 'usuarios'
+        db_table = 'usuarios_contratos'
 
 class Payment(models.Model):
     contract = models.ForeignKey(
@@ -115,7 +115,6 @@ class ContractTermination(models.Model):
 
     class Meta:
         db_table = "encerramento_contrato"
-
 
 class ContractEvent(models.Model):
     EVENT_TYPES = [
