@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view  # type:ignore
 from rest_framework.response import Response  # type:ignore
 from web3 import Account, Web3  # type:ignore
 
-from .models import ContractEvent, ContractTermination, Payment, RentalContract
+from .models import ContractEvent, ContractTermination, Payment, RentalContract, Usuario
 from .utils.check_connection import check_connection
 from .utils.load_contract_data import load_contract_data
 from .utils.log_contract_event import log_contract_event
@@ -612,3 +612,25 @@ def simular_tempo(request, contract_id):
         return Response({"error": str(ve)}, status=400)
     except Exception as e:
         return Response({"error": f"Erro ao simular tempo: {str(e)}"}, status=400)
+
+def login(request):
+    if request.method == "POST":
+        data = request.json()
+        login = data.get("login")
+
+        try:
+            usuario = Usuario.objects.get(login=login)
+            return JsonResponse({
+                "success": True,
+                "user_data": {
+                    "id": usuario.id,
+                    "login": usuario.login,
+                    "email": usuario.email,
+                    "is_landlord": usuario.is_landlord,
+                    "id_account": usuario.id_account,
+                    "wallet_address": usuario.wallet_address,
+                }
+            })
+        except Usuario.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Usuário não encontrado"}, status=404)
+    return JsonResponse({"error": "Método não permitido"}, status=405)

@@ -17,32 +17,33 @@ load_dotenv()
 
 DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
-# Verifique se o usuário está logado
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
 
-# Função para exibir a página de login
 def show_login_page():
     st.title("Login")
-    nome_completo = st.text_input("Nome Completo")
-    private_key = st.text_input("Chave Privada", type="password")
+    login = st.text_input("Login")  # Mudança para 'login'
 
     if st.button("Entrar"):
-        if not nome_completo or not private_key:
-            st.error("Nome completo e chave privada são obrigatórios.")
+        if not login:
+            st.error("Login é obrigatório.")
         else:
-            login_data = {"nome_completo": nome_completo, "private_key": private_key}
+            login_data = {"login": login}
             user_data, success = api_post("api/login/", login_data)
             if success:
                 st.success("Login realizado com sucesso!")
-                # Armazene os dados do usuário na sessão
                 st.session_state["user_data"] = user_data
                 st.session_state["is_logged_in"] = True
-                st.experimental_rerun()  # Atualiza a página após o login
+                st.experimental_rerun()
             else:
-                st.error("Erro ao fazer login.")
+                st.error("Erro ao fazer login: Usuário não encontrado.")
 
-# Função para chamada da API POST
+if not st.session_state["is_logged_in"]:
+    show_login_page()
+else:
+    st.sidebar.title("Gestão de Contratos Inteligentes")
+    page = st.sidebar.selectbox("Selecione a página", ["Criar Contrato", "Assinar Contrato", ...])
+
 def api_post(endpoint, data):
     try:
         response = requests.post(f"{DJANGO_API_URL}{endpoint}", json=data)
