@@ -51,8 +51,8 @@ jobs:
         run: |
           source venv/bin/activate  # Ativa o ambiente virtual
           python manage.py makemigrations
-          python manage.py migrate contratos_inteligentes 0007 --fake  # Marca a migração específica como aplicada
-          python manage.py migrate --settings=gestao_contratos_inteligentes.settings  # Aplica todas as migrações restantes  
+          python manage.py migrate contratos_inteligentes 0007 --fake
+          python manage.py migrate --settings=gestao_contratos_inteligentes.settings
 
       - name: Run tests with coverage
         run: |
