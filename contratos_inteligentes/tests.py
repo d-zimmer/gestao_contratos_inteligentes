@@ -806,16 +806,16 @@ class RentalContractModelTest(TestCase):
         contract = RentalContract(**self.valid_contract_data)
         self.assertTrue(contract.is_contract_active())
 
-class UserModelTest(TestCase):
+class UsuarioModelTest(TestCase):
     def test_invalid_wallet_address_length(self):
         user = Usuario(
-            name="John Doe",
+            login="john.doe",  # Certifique-se de usar o campo `login` se `name` não existe
             email="john@example.com",
-            wallet_address="0x12345",
+            wallet_address="0x12345",  # Endereço de carteira inválido
             is_landlord=True,
         )
         with self.assertRaises(ValidationError):
-            user.full_clean()
+            user.full_clean()  
 
 class PaymentModelTest(TestCase):
     def setUp(self):
