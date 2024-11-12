@@ -12,7 +12,7 @@ from rest_framework.test import APIClient  # type: ignore
 from web3 import Web3  # type: ignore
 
 from contratos_inteligentes.models import (ContractEvent, Payment,
-                                           RentalContract, User)
+                                           RentalContract, Usuario)
 from contratos_inteligentes.utils.check_connection import check_connection
 from contratos_inteligentes.utils.load_contract_data import load_contract_data
 from contratos_inteligentes.utils.log_contract_event import log_contract_event
