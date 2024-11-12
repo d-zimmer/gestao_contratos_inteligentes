@@ -29,10 +29,10 @@ def show_login_page():
             st.error("Login é obrigatório.")
         else:
             login_data = {"login": login}
-            user_data, success = api_post("api/login/", login_data)
+            response, success = api_post("api/login/", login_data)
             if success:
                 st.success("Login realizado com sucesso!")
-                st.session_state["user_data"] = user_data
+                st.session_state["user_id"] = response["user_id"]
                 st.session_state["is_logged_in"] = True
                 st.experimental_rerun()
             else:

@@ -622,17 +622,11 @@ def login(request):
             if not login:
                 return JsonResponse({"success": False, "error": "Login é obrigatório"}, status=400)
 
-            usuario = Usuario.objects.get(login=login)
+            # Buscar apenas o ID do usuário
+            usuario = Usuario.objects.only("id").get(login__iexact=login)
             return JsonResponse({
                 "success": True,
-                "user_data": {
-                    "id": usuario.id,
-                    "login": usuario.login,
-                    "email": usuario.email,
-                    "is_landlord": usuario.is_landlord,
-                    "id_account": usuario.id_account,
-                    "wallet_address": usuario.wallet_address,
-                }
+                "user_id": usuario.id
             })
         except Usuario.DoesNotExist:
             return JsonResponse({"success": False, "error": "Usuário não encontrado"}, status=404)
