@@ -65,28 +65,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="User",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=100)),
-                ("email", models.EmailField(max_length=254, unique=True)),
-                ("is_landlord", models.BooleanField(default=False)),
-                ("wallet_address", models.CharField(max_length=42, unique=True)),
-                ("signature", models.CharField(blank=True, max_length=132)),
-            ],
-            options={
-                "db_table": "usuarios",
-            },
-        ),
-        migrations.CreateModel(
             name="Payment",
             fields=[
                 (
