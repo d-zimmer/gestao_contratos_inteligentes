@@ -164,11 +164,11 @@ class ContractEvent(models.Model):
         db_table = "eventos_contrato"
 
 class Usuario(models.Model):
-    login = models.CharField(max_length=100, unique=True)  # Login do usuário
-    email = models.EmailField(blank=True, null=True)  # Email do usuário
-    is_landlord = models.BooleanField(default=False)  # Se é locador
-    id_account = models.TextField(blank=True, null=True)  # ID da conta
-    wallet_address = models.CharField(max_length=42, blank=True, null=True)  # Endereço da carteira na blockchain
+    login = models.CharField(max_length=100, unique=True)
+    email = models.EmailField(blank=True, null=True)
+    is_landlord = models.BooleanField(default=False)
+    id_account = models.TextField(blank=True, null=True)
+    wallet_address = models.CharField(max_length=42, blank=True, null=True)
 
-    def __str__(self):
-        return self.login
+    class Meta:
+        db_table = 'usuarios'  # Define o nome da tabela para 'usuarios'
