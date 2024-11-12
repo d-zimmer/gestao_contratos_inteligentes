@@ -189,6 +189,9 @@ jobs:
       - name: Restart Django and Nginx services on VM
         run: |
           ssh david_zimmermann@4.228.59.7 "
-            sudo systemctl restart django_gunicorn &&
-            sudo systemctl restart nginx
+            sudo systemctl restart django_gunicorn.service &&
+            sudo systemctl restart nginx.service &&
+            sudo systemctl restart streamlit.service &&
+            sudo systemctl restart ganache.service &&
+            sudo systemctl restart postgresql.service
           "

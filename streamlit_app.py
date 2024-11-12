@@ -25,7 +25,6 @@ def download_link_pdf(pdf_content, filename="contrato.pdf"):
     b64 = base64.b64encode(pdf_content).decode()
     return f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Baixar Contrato</a>'
 
-
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
 
@@ -38,7 +37,6 @@ def show_login_page():
             st.error("Login é obrigatório.")
         else:
             login_data = {"login": login}
-            st.write(f"Login enviado: {login_data}")  # Verifique o valor de login
             response, success = api_post("api/login/", login_data)
             if success:
                 st.success("Login realizado com sucesso!")
@@ -81,10 +79,9 @@ def fetch_contracts():
     else:
         return []
 
-if not st.session_state["is_logged_in"]:
+if not st.session_state.get("is_logged_in", False):
     show_login_page()
 else:
-    # Menu lateral e páginas do aplicativo para o usuário logado
     st.sidebar.title("Gestão de Contratos Inteligentes")
     page = st.sidebar.selectbox("Selecione a página",
                                 ["Criar Contrato",
@@ -96,8 +93,7 @@ else:
 
     if page == "Criar Contrato":
         st.title("Criar Novo Contrato")
-        
-        # Campos para criação de contrato
+
         landlord = st.text_input("Endereço do Locador")
         tenant = st.text_input("Endereço do Inquilino")
         rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1)
