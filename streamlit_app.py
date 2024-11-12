@@ -42,7 +42,7 @@ def show_login_page():
                 st.success("Login realizado com sucesso!")
                 st.session_state["user_id"] = response["user_id"]
                 st.session_state["is_logged_in"] = True
-                st.experimental_rerun()
+                st.session_state["login_success"] = True
             else:
                 st.error("Erro ao fazer login: Usuário não encontrado.")
 
@@ -266,4 +266,4 @@ else:
 # Função para logout
 if st.sidebar.button("Logout"):
     st.session_state["is_logged_in"] = False
-    st.experimental_rerun()  # Atualiza a página após o logout
+    st.session_state["logout_success"] = not st.session_state.get("logout_success", False)  # Alterna a flag
