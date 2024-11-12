@@ -49,10 +49,14 @@ jobs:
 
       - name: Run migrations for testing
         run: |
-          source venv/bin/activate  # Ativa o ambiente virtual
+          source venv/bin/activate
           python manage.py makemigrations
-          python manage.py migrate contratos_inteligentes 0007 --fake
-          python manage.py migrate --settings=gestao_contratos_inteligentes.settings
+
+          python manage.py dbshell <<EOF
+          DROP TABLE IF EXISTS usuarios;
+          EOF
+
+          python manage.py migrate
 
       - name: Run tests with coverage
         run: |
