@@ -1,5 +1,6 @@
 import streamlit as st # type:ignore
 import requests # type:ignore
+import random
 import os
 import base64
 import datetime
@@ -27,6 +28,16 @@ def download_link_pdf(pdf_content, filename="contrato.pdf"):
 
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
+    
+def preencher_contrato_automaticamente():
+    landlord = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
+    tenant = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
+    rent_amount = random.randint(1, 10) * 1_000_000_000_000_000  # Valor em Wei
+    deposit_amount = random.randint(1, 5) * 1_000_000_000_000_000  # Valor em Wei
+    start_date = date.today()
+    end_date = start_date + timedelta(days=30 * random.randint(1, 12))
+    contract_duration = (end_date - start_date).days // 30
+    return landlord, tenant, rent_amount, deposit_amount, start_date, end_date, contract_duration
 
 def show_login_page():
     st.title("Login")
@@ -94,13 +105,24 @@ else:
     if page == "Criar Contrato":
         st.title("Criar Novo Contrato")
 
-        landlord = st.text_input("Endereço do Locador")
-        tenant = st.text_input("Endereço do Inquilino")
-        rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1)
-        deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1)
-        start_date = st.date_input("Data de Início do Contrato")
-        end_date = st.date_input("Data de Término do Contrato")
-        contract_duration = st.number_input("Duração do Contrato (Meses)", min_value=1, step=1)
+        if st.button("Contrato Pendente"):
+            landlord, tenant, rent_amount, deposit_amount, start_date, end_date, contract_duration = preencher_contrato_automaticamente()
+            st.session_state["landlord"] = landlord
+            st.session_state["tenant"] = tenant
+            st.session_state["rent_amount"] = rent_amount
+            st.session_state["deposit_amount"] = deposit_amount
+            st.session_state["start_date"] = start_date
+            st.session_state["end_date"] = end_date
+            st.session_state["contract_duration"] = contract_duration
+
+        # Campos para criar o contrato
+        landlord = st.text_input("Endereço do Locador", st.session_state.get("landlord", ""))
+        tenant = st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
+        rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1, value=st.session_state.get("rent_amount", 0))
+        deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1, value=st.session_state.get("deposit_amount", 0))
+        start_date = st.date_input("Data de Início do Contrato", st.session_state.get("start_date", date.today()))
+        end_date = st.date_input("Data de Término do Contrato", st.session_state.get("end_date", date.today()))
+        contract_duration = st.number_input("Duração do Contrato (Meses)", min_value=1, step=1, value=st.session_state.get("contract_duration", 1))
         private_key = st.text_input("Chave Privada (Locador)", type="password")
 
         if st.button("Criar Contrato"):

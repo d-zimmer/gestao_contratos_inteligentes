@@ -26,7 +26,6 @@ contract_abi, bytecode = load_contract_data()
 # global_contract_address = Web3.to_checksum_address("0x5fbdb2315678afecb367f032d93f642f64180aa3")
 # global_contract = web3.eth.contract(address=global_contract_address, abi=contract_abi)
 
-
 @api_view(["POST"])
 def create_contract_api(request):
     try:
@@ -285,7 +284,7 @@ def register_payment_api(request, contract_id):
         payment_type = request.data.get("payment_type")  # 'Aluguel' ou 'Depósito'
         amount = request.data.get("amount")
 
-        if not amount or float(amount) <= 0:
+        if not amount or int(amount) <= 0:
             return Response({"error": "Valor do pagamento inválido."}, status=400)
 
         try:
@@ -313,13 +312,12 @@ def register_payment_api(request, contract_id):
 
         try:
             contract_state = smart_contract.functions.getContractState().call()
-            # print(f"Estado atual do contrato: {contract_state}")
         except Exception as e:
-            print(f"Erro ao obter estado do contrato: {str(e)}")
             return Response(
                 {"error": f"Erro ao obter estado do contrato: {str(e)}"}, status=500
             )
 
+        # Verifica se o valor do pagamento corresponde ao esperado
         if payment_type == "Aluguel":
             tx_function = smart_contract.functions.payRent()
             expected_amount = smart_contract.functions.getRentAmount().call()
@@ -329,12 +327,11 @@ def register_payment_api(request, contract_id):
         else:
             return Response({"error": "Tipo de pagamento inválido."}, status=400)
 
-        amount_in_wei = web3.to_wei(float(amount), "ether")
-
-        if amount_in_wei != expected_amount:
+        # Verificar se o valor está correto
+        if int(amount) != expected_amount:
             return Response(
                 {
-                    "error": f"Valor incorreto para {payment_type}. Esperado: {expected_amount} Wei, Recebido: {amount_in_wei} Wei"
+                    "error": f"Valor incorreto para {payment_type}. Esperado: {expected_amount} Wei, Recebido: {amount} Wei"
                 },
                 status=400,
             )
@@ -343,7 +340,7 @@ def register_payment_api(request, contract_id):
             tx = tx_function.build_transaction(
                 {
                     "from": account_to_pay.address,
-                    "value": amount_in_wei,  # Enviar o valor convertido para Wei
+                    "value": int(amount),  # Enviar o valor já em Wei
                     "nonce": web3.eth.get_transaction_count(account_to_pay.address),
                     "gas": 200000,
                     "gasPrice": web3.to_wei("20", "gwei"),
@@ -360,7 +357,7 @@ def register_payment_api(request, contract_id):
                 # Registrar o pagamento no banco de dados
                 Payment.objects.create(
                     contract=rental_contract,
-                    amount=amount,  # Valor original
+                    amount=amount,  # Valor em Wei
                     payment_type="rent" if payment_type == "Aluguel" else "deposit",
                     transaction_hash=tx_hash.hex(),
                     is_verified=True,
@@ -406,7 +403,6 @@ def register_payment_api(request, contract_id):
             },
             status=500,
         )
-
 
 @api_view(["GET"])
 def contract_list_api(request):
@@ -516,7 +512,6 @@ def terminate_contract_api(request, contract_id):
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-
 
 @api_view(["GET"])
 def contract_events_api(request, contract_id):
