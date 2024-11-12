@@ -654,7 +654,7 @@ class UtilsTests(TestCase):
             normalize_address(None)
         self.assertEqual(str(context.exception), "Endereço não pode ser None ou vazio.")
 
-    @patch.dict(os.environ, {"TEST_ENV": "false", "SEPOLIA_INFURA_URL": "http://invalid-url"})
+    @patch.dict(os.environ, {"TEST_ENV": "false", "GANACHE_URL": "http://invalid-url"})
     def test_check_connection_invalid_url(self):
         """Verifica se uma exceção é levantada para uma URL inválida."""
         connector = BlockchainConnector()
@@ -856,7 +856,7 @@ class BlockchainConnectorTests(TestCase):
         self.assertTrue(web3_instance.is_connected())
         self.assertEqual(type(web3_instance.provider), Web3.EthereumTesterProvider)
 
-    @patch.dict(os.environ, {"TEST_ENV": "false", "SEPOLIA_INFURA_URL": "http://invalid-url"})
+    @patch.dict(os.environ, {"TEST_ENV": "false", "GANACHE_URL": "http://invalid-url"})
     def test_connect_with_invalid_url(self):
         """Verifica se uma exceção é levantada para uma URL inválida."""
         connector = BlockchainConnector()
