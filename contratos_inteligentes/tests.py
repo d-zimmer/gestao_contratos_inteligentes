@@ -808,7 +808,7 @@ class RentalContractModelTest(TestCase):
 
 class UserModelTest(TestCase):
     def test_invalid_wallet_address_length(self):
-        user = User(
+        user = Usuario(
             name="John Doe",
             email="john@example.com",
             wallet_address="0x12345",
