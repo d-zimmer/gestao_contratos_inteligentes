@@ -8,11 +8,6 @@ STATUS_CHOICES = [
     ("terminated", "Encerrado"),
 ]
 
-from django.core.exceptions import ValidationError
-from django.db import models
-from django.utils import timezone
-
-
 class RentalContract(models.Model):
     landlord = models.CharField(max_length=42)
     tenant = models.CharField(max_length=42)
@@ -77,7 +72,7 @@ class RentalContract(models.Model):
     class Meta:
         db_table = "contratos"
 
-class Usuario(models.Model):
+class User(models.Model):
     login = models.CharField(max_length=100, unique=True)
     email = models.EmailField(blank=True, null=True)
     is_landlord = models.BooleanField(default=False)
