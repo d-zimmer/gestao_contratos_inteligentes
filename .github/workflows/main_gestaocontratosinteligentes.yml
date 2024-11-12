@@ -52,11 +52,7 @@ jobs:
           source venv/bin/activate
           python manage.py makemigrations
 
-          python manage.py dbshell <<EOF
-          DROP TABLE IF EXISTS usuarios;
-          EOF
-
-          python manage.py migrate
+          python manage.py migrate --fake-initial
 
       - name: Run tests with coverage
         run: |
