@@ -36,7 +36,7 @@ def handle_logout():
 
 def preencher_contrato_automaticamente():
     landlord = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
-    tenant = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
+    tenant = st.session_state.get("user_address", "")
     rent_amount = random.randint(250, 1500)
     deposit_amount = random.randint(250, 1500)
     start_date = datetime.now()
