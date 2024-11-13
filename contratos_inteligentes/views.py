@@ -619,16 +619,16 @@ def login(request):
             if not login:
                 return JsonResponse({"success": False, "error": "Login é obrigatório"}, status=400)
 
-            # Buscar apenas o ID do usuário
-            usuario = Usuario.objects.only("id").get(login__iexact=login)
+            # Buscar o ID e o endereço da wallet
+            usuario = Usuario.objects.only("id", "login", "wallet_address").get(login__iexact=login)
             return JsonResponse({
                 "success": True,
-                "user_id": usuario.id
+                "user_id": usuario.id,
+                "user_login": usuario.login,
+                "wallet_address": usuario.wallet_address
             })
         except Usuario.DoesNotExist:
-            print(f"Usuário {login} não encontrado no banco de dados")
             return JsonResponse({"success": False, "error": "Usuário não encontrado"}, status=404)
         except json.JSONDecodeError:
-            print("Erro ao decodificar JSON")
             return JsonResponse({"success": False, "error": "Erro ao decodificar JSON"}, status=400)
     return JsonResponse({"error": "Método não permitido"}, status=405)

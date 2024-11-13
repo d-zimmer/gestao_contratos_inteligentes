@@ -39,9 +39,9 @@ def preencher_contrato_automaticamente():
     tenant = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
     rent_amount = random.randint(250, 1500)
     deposit_amount = random.randint(250, 1500)
-    start_date = datetime.today()
+    start_date = datetime.now()
     end_date = start_date + timedelta(minutes=2)
-    contract_duration = (end_date - start_date).min
+    contract_duration = 2
     return landlord, tenant, rent_amount, deposit_amount, start_date, end_date, contract_duration
 
 def show_login_page():
@@ -54,11 +54,21 @@ def show_login_page():
         else:
             login_data = {"login": login}
             response, success = api_post("api/login/", login_data)
+
+            st.write("Resposta da API:", response)
+
             if success:
                 st.success("Login realizado com sucesso!")
-                st.session_state["user_id"] = response["user_id"]
-                st.session_state["is_logged_in"] = True
-                st.rerun()
+
+                if "user_login" in response and "wallet_address" in response:
+                    st.session_state["user_id"] = response["user_id"]
+                    st.session_state["user_login"] = response["user_login"]
+                    st.session_state["user_address"] = response["wallet_address"]
+                    st.session_state["is_logged_in"] = True
+                    st.session_state["current_page"] = "home"
+                    st.rerun()
+                else:
+                    st.error("Erro: 'user_login' ou 'wallet_address' não encontrado na resposta.")
             else:
                 st.error("Erro ao fazer login: Usuário não encontrado.")
 
