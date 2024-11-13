@@ -3,7 +3,7 @@ import requests # type:ignore
 import random
 import os
 import base64
-import datetime
+from datetime import datetime, date, timedelta
 from dotenv import load_dotenv # type:ignore
 from web3 import Web3 # type:ignore
 from scripts.gerar_pdf_contrato import gerar_pdf_contrato
@@ -18,6 +18,9 @@ load_dotenv()
 
 DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
+if "is_logged_in" not in st.session_state:
+    st.session_state["is_logged_in"] = False
+
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
     return account.address
@@ -26,17 +29,19 @@ def download_link_pdf(pdf_content, filename="contrato.pdf"):
     b64 = base64.b64encode(pdf_content).decode()
     return f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Baixar Contrato</a>'
 
-if "is_logged_in" not in st.session_state:
+def handle_logout():
+    st.session_state.clear()  # Clear all session states on logout
     st.session_state["is_logged_in"] = False
-    
+    st.session_state["current_page"] = "login" 
+
 def preencher_contrato_automaticamente():
     landlord = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
     tenant = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
-    rent_amount = random.randint(1, 10) * 1_000_000_000_000_000  # Valor em Wei
-    deposit_amount = random.randint(1, 5) * 1_000_000_000_000_000  # Valor em Wei
-    start_date = date.today()
-    end_date = start_date + timedelta(days=30 * random.randint(1, 12))
-    contract_duration = (end_date - start_date).days // 30
+    rent_amount = random.randint(250, 1500)
+    deposit_amount = random.randint(250, 1500)
+    start_date = datetime.today()
+    end_date = start_date + timedelta(minutes=2)
+    contract_duration = (end_date - start_date).min
     return landlord, tenant, rent_amount, deposit_amount, start_date, end_date, contract_duration
 
 def show_login_page():
@@ -53,7 +58,7 @@ def show_login_page():
                 st.success("Login realizado com sucesso!")
                 st.session_state["user_id"] = response["user_id"]
                 st.session_state["is_logged_in"] = True
-                st.session_state["login_success"] = True
+                st.rerun()
             else:
                 st.error("Erro ao fazer login: Usuário não encontrado.")
 
@@ -90,7 +95,7 @@ def fetch_contracts():
     else:
         return []
 
-if not st.session_state.get("is_logged_in", False):
+if not st.session_state["is_logged_in"]:
     show_login_page()
 else:
     st.sidebar.title("Gestão de Contratos Inteligentes")
@@ -120,8 +125,14 @@ else:
         tenant = st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
         rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1, value=st.session_state.get("rent_amount", 0))
         deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1, value=st.session_state.get("deposit_amount", 0))
-        start_date = st.date_input("Data de Início do Contrato", st.session_state.get("start_date", date.today()))
-        end_date = st.date_input("Data de Término do Contrato", st.session_state.get("end_date", date.today()))
+        start_date = st.date_input(
+            "Data de Início do Contrato", 
+            st.session_state.get("start_date", datetime.today())
+        )
+        end_date = st.date_input(
+            "Data de Término do Contrato", 
+            st.session_state.get("end_date", datetime.today())
+        )
         contract_duration = st.number_input("Duração do Contrato (Meses)", min_value=1, step=1, value=st.session_state.get("contract_duration", 1))
         private_key = st.text_input("Chave Privada (Locador)", type="password")
 
@@ -285,7 +296,4 @@ else:
                     else:
                         st.error(f"Erro ao avançar o tempo: {result}")
 
-# Função para logout
-if st.sidebar.button("Logout"):
-    st.session_state["is_logged_in"] = False
-    st.session_state["logout_success"] = not st.session_state.get("logout_success", False)  # Alterna a flag
+st.sidebar.button("Logout", on_click=handle_logout)
