@@ -620,12 +620,13 @@ def login(request):
                 return JsonResponse({"success": False, "error": "Login é obrigatório"}, status=400)
 
             # Buscar o ID e o endereço da wallet
-            usuario = Usuario.objects.only("id", "login", "wallet_address").get(login__iexact=login)
+            usuario = Usuario.objects.only("id", "login", "wallet_address", "is_landlord").get(login__iexact=login)
             return JsonResponse({
                 "success": True,
                 "user_id": usuario.id,
                 "user_login": usuario.login,
-                "wallet_address": usuario.wallet_address
+                "wallet_address": usuario.wallet_address,
+                "is_landlord": usuario.is_landlord
             })
         except Usuario.DoesNotExist:
             return JsonResponse({"success": False, "error": "Usuário não encontrado"}, status=404)
