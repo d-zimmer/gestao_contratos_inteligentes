@@ -20,6 +20,15 @@ DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
+    
+def obter_endereco_locador():
+    # Faz uma requisição para obter o endereço do locador
+    response, success = api_get("api/get_landlord_address/")
+    if success and "wallet_address" in response:
+        return response["wallet_address"]
+    else:
+        st.error("Erro ao obter o endereço do locador.")
+        return None
 
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
@@ -37,7 +46,7 @@ if st.session_state.get("is_logged_in", False):
     st.sidebar.button("Logout", on_click=handle_logout)
 
 def preencher_contrato_automaticamente():
-    landlord = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
+    landlord = obter_endereco_locador()  # Usa o endereço específico do locador
     tenant = st.session_state.get("user_address", "")
     rent_amount = random.randint(250, 1500)
     deposit_amount = random.randint(250, 1500)

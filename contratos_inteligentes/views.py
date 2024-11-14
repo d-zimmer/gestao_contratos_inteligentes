@@ -632,3 +632,13 @@ def login(request):
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "error": "Erro ao decodificar JSON"}, status=400)
     return JsonResponse({"error": "Método não permitido"}, status=405)
+
+def get_landlord_address(request):
+    try:
+        landlord = Usuario.objects.get(is_landlord=True)
+        return JsonResponse({
+            "success": True,
+            "wallet_address": landlord.wallet_address
+        })
+    except Usuario.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Locador não encontrado"}, status=404)
