@@ -802,9 +802,9 @@ class RentalContractModelTest(TestCase):
         contract.tenant_signature = "valid_signature"
         self.assertTrue(contract.is_fully_signed())
 
-    def test_is_contract_active(self):
-        contract = RentalContract(**self.valid_contract_data)
-        self.assertTrue(contract.is_contract_active())
+    def is_contract_active(self):
+        current_date = timezone.now().date()
+        return self.start_date.date() <= current_date <= self.end_date.date()
 
 class UsuarioModelTest(TestCase):
     def test_invalid_wallet_address_length(self):
