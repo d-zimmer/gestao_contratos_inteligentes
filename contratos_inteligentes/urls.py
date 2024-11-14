@@ -31,5 +31,6 @@ urlpatterns = [
         name="simular_tempo",
     ),
     path('api/login/', views.login, name='login'),
+    path("api/get_landlord_address/", views.get_landlord_address, name="get_landlord_address"),
     # path('api/contracts/<int:contract_id>/test_contract_functions/', views.test_contract_functions, name='test_contract_functions'),
 ]
