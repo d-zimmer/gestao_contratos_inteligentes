@@ -8,17 +8,17 @@ STATUS_CHOICES = [
     ("terminated", "Encerrado"),
 ]
 
+
 class RentalContract(models.Model):
     landlord = models.CharField(max_length=42)
     tenant = models.CharField(max_length=42)
     rent_amount = models.DecimalField(max_digits=38, decimal_places=2)
     deposit_amount = models.DecimalField(max_digits=38, decimal_places=2)
     contract_address = models.CharField(max_length=42, unique=True)
-    start_date = models.DateField(default=timezone.now)
-    end_date = models.DateField(null=True, blank=True)
-    rent_due_date = models.DateField(
-        null=True, blank=True
-    )  # Data de vencimento do aluguel
+    start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField(null=True, blank=True)
+    rent_due_date = models.DateTimeField(null=True, blank=True)
+
     contract_duration = models.PositiveIntegerField(
         help_text="Duração do contrato em meses", null=True
     )
@@ -34,10 +34,9 @@ class RentalContract(models.Model):
     landlord_signature = models.CharField(max_length=132, blank=True)
     tenant_signature = models.CharField(max_length=132, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    simulated_time = models.DateField(default=timezone.now, null=True, blank=True)
+    simulated_time = models.DateTimeField(default=timezone.now, null=True, blank=True)  # Incluindo horário
 
     def clean(self):
-        # Validação do comprimento dos endereços
         if len(self.contract_address) != 42:
             raise ValidationError("Endereço do contrato deve ter 42 caracteres.")
 
@@ -46,13 +45,11 @@ class RentalContract(models.Model):
                 "O endereço do locador e do inquilino devem ter 42 caracteres."
             )
 
-        # Verificação da data de término ser posterior à data de início
         if self.end_date and self.end_date <= self.start_date:
             raise ValidationError(
                 "A data de término deve ser posterior à data de início."
             )
 
-        # Validação do valor do aluguel e do depósito
         if self.rent_amount <= 0:
             raise ValidationError("O valor do aluguel deve ser maior que zero.")
         if self.deposit_amount < 0:
@@ -67,7 +64,7 @@ class RentalContract(models.Model):
         return bool(self.landlord_signature) and bool(self.tenant_signature)
 
     def is_contract_active(self):
-        return self.start_date <= timezone.now().date() <= self.end_date
+        return self.start_date <= timezone.now() <= self.end_date
 
     class Meta:
         db_table = "contratos"
