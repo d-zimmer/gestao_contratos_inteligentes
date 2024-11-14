@@ -30,9 +30,11 @@ def download_link_pdf(pdf_content, filename="contrato.pdf"):
     return f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Baixar Contrato</a>'
 
 def handle_logout():
-    st.session_state.clear()  # Clear all session states on logout
     st.session_state["is_logged_in"] = False
-    st.session_state["current_page"] = "login" 
+    st.session_state["current_page"] = "login"
+
+if st.session_state.get("is_logged_in", False):
+    st.sidebar.button("Logout", on_click=handle_logout)
 
 def preencher_contrato_automaticamente():
     landlord = f"0x{''.join(random.choices('0123456789abcdef', k=40))}"
@@ -306,4 +308,5 @@ else:
                     else:
                         st.error(f"Erro ao avançar o tempo: {result}")
 
-st.sidebar.button("Logout", on_click=handle_logout)
+# if st.session_state.get("current_page") != "login":
+#     st.sidebar.button("Logout", on_click=handle_logout)
