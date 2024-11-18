@@ -90,8 +90,9 @@ def create_contract_api(request):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
-        end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
+        # Aceitar formato completo de datetime (YYYY-MM-DDTHH:MM:SS)
+        start_date = datetime.datetime.fromisoformat(request.data["start_date"])
+        end_date = datetime.datetime.fromisoformat(request.data["end_date"])
         if end_date <= start_date:
             return Response(
                 {"error": "A data de término deve ser posterior à data de início."},
@@ -99,7 +100,7 @@ def create_contract_api(request):
             )
     except ValueError:
         return Response(
-            {"error": "Formato de data inválido. Use 'YYYY-MM-DD'."},
+            {"error": "Formato de data inválido. Use 'YYYY-MM-DDTHH:MM:SS'."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

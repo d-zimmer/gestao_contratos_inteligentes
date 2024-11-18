@@ -65,20 +65,18 @@ class ContractAPITestCase(TestCase):
         }
     
     @patch("contratos_inteligentes.utils.check_connection", side_effect=check_connection)
-    def test_create_contract_success(self, mock_to_wei):  # Adicione o argumento mock
-        """Teste para verificar a criação de contrato com dados válidos."""
-        contract_data = {
-            "landlord": self.contract_data["landlord"],
-            "tenant": self.contract_data["tenant"],
-            "rent_amount": self.contract_data["rent_amount"],
-            "deposit_amount": self.contract_data["deposit_amount"],
-            "start_date": self.contract_data["start_date"],
-            "end_date": self.contract_data["end_date"],
-            "contract_duration": self.contract_data["contract_duration"],
-            "private_key": self.contract_data["private_key_landlord"],
+    def test_create_contract_success(self, mock_web3):
+        data = {
+            "landlord": "0x1234567890abcdef1234567890abcdef12345678",
+            "tenant": "0xabcdefabcdefabcdefabcdefabcdefabcdef12345678",
+            "rent_amount": 500,
+            "deposit_amount": 1000,
+            "start_date": "2024-11-18T10:00:00",  # Formato correto
+            "end_date": "2024-11-18T11:00:00",    # Formato correto
+            "contract_duration": 2,
+            "private_key": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         }
-        response = self.client.post(self.create_url, data=contract_data, format="json")
-
+        response = self.client.post("/api/create/", data, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertIn("contract_address", response.data)
 
@@ -99,12 +97,17 @@ class ContractAPITestCase(TestCase):
         self.assertIn("error", response.data)
 
     def test_create_contract_invalid_dates(self):
-        invalid_data = self.contract_data.copy()
-        invalid_data["start_date"] = "2025-01-01"
-        invalid_data["end_date"] = "2024-01-01"  # Data de término anterior à data de início
-        invalid_data["private_key"] = self.contract_data["private_key_landlord"]
-
-        response = self.client.post(self.create_url, data=invalid_data, format="json")
+        data = {
+            "landlord": "0x1234567890abcdef1234567890abcdef12345678",
+            "tenant": "0xabcdefabcdefabcdefabcdefabcdefabcdef12345678",
+            "rent_amount": 500,
+            "deposit_amount": 1000,
+            "start_date": "2024-11-18T10:00:00",  # Inclua data e hora no formato correto
+            "end_date": "2024-11-18T09:00:00",    # Data de término antes da data de início
+            "contract_duration": 2,
+            "private_key": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        }
+        response = self.client.post("/api/create/", data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("A data de término deve ser posterior à data de início.", response.data["error"])
 
