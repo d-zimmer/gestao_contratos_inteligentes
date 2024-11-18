@@ -175,8 +175,8 @@ else:
                     "tenant": tenant,
                     "rent_amount": rent_amount,
                     "deposit_amount": deposit_amount,
-                    "start_date": str(start_date),
-                    "end_date": str(end_date),
+                    "start_date": start_date.strftime("%Y-%m-%d %H:%M:%S"),  # Envia formato completo
+                    "end_date": end_date.strftime("%Y-%m-%d %H:%M:%S"), 
                     "contract_duration": contract_duration,  # Passando duração em minutos
                     "private_key": private_key
                 }

@@ -5,7 +5,7 @@ import traceback
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta  # type:ignore
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt # type: ignore
 from django.http import JsonResponse  # type:ignore
 from django.shortcuts import get_object_or_404  # type:ignore
 from django.utils import timezone  # type:ignore
@@ -90,8 +90,8 @@ def create_contract_api(request):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-        end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
+        end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
         if end_date <= start_date:
             return Response(
                 {"error": "A data de término deve ser posterior à data de início."},

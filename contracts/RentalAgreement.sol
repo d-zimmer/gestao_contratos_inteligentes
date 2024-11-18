@@ -12,8 +12,9 @@ contract RentalAgreement {
     bool public isActive;
     uint256 public dataVencimentoAluguel;
     uint256 public dataTerminoContrato;
-    uint256 public duracaoContratoMeses;
-    uint256 public simulatedTime;
+    uint256 public duracaoContratoSegundos;
+    uint256 public startTimestamp;
+    uint256 public endTimestamp;
 
     event RentPaid(address indexed inquilino, uint256 amount);
     event DepositPaid(address indexed inquilino, uint256 amount);
@@ -29,17 +30,17 @@ contract RentalAgreement {
         address _inquilino,
         uint256 _rentAmount,
         uint256 _deposit,
-        uint256 _duracaoContratoMeses,
-        uint256 _dataTerminoContrato // Receber diretamente o timestamp
+        uint256 _startTimestamp,
+        uint256 _endTimestamp // Receber diretamente o timestamp
     ) {
         locador = msg.sender;
         inquilino = _inquilino;
         rentAmount = _rentAmount;
         deposit = _deposit;
-        duracaoContratoMeses = _duracaoContratoMeses;
+        startTimestamp = _startTimestamp;
+        endTimestamp = _endTimestamp;
+        duracaoContratoSegundos = _endTimestamp - _startTimestamp;
         isTerminated = false;
-        simulatedTime = block.timestamp;
-        dataTerminoContrato = _dataTerminoContrato; // Usa o timestamp fornecido
     }
 
     function payRent() public payable {
@@ -134,27 +135,20 @@ contract RentalAgreement {
         }
     }
 
-    function verificarStatus() public {
-        if (simulatedTime > dataVencimentoAluguel && !isTerminated) {
-            uint256 diasAtraso = (simulatedTime - dataVencimentoAluguel) / 1 days;
-            emit PaymentLate(inquilino, diasAtraso);
-        }
-
-        if (simulatedTime > dataTerminoContrato) {
-            emit ContractExpired(locador, inquilino);
-        }
-    }
-
     function autoRenew() public {
         require(!isTerminated, "Contrato foi encerrado.");
         require(isActive, unicode"O contrato não está ativo.");
         require(isFullySigned(), unicode"O contrato precisa ser assinado por ambas as partes.");
 
-        // Renova o contrato adicionando minutos em vez de meses
-        uint256 durationInSeconds = duracaoContratoMeses * 30 days; // Mantenha a lógica para produção
-        dataTerminoContrato = block.timestamp + (duracaoContratoMeses * 60); // Para testes, substitua 30 dias por 60 segundos
+        uint256 newEndTimestamp = endTimestamp + duracaoContratoSegundos;
+        endTimestamp = newEndTimestamp;
 
-        emit ContractRenewed(locador, inquilino, dataTerminoContrato);
+        emit ContractRenewed(locador, inquilino, newEndTimestamp);
+    }
+
+    function checkAndRenew() public {
+        require(block.timestamp >= endTimestamp, unicode"Contrato ainda não venceu.");
+        autoRenew();
     }
 
     function getContractEndDate() public view returns (uint256) {
