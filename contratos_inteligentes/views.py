@@ -59,7 +59,7 @@ def create_contract_api(request):
     deposit_amount = request.data["deposit_amount"]
     start_date = request.data["start_date"]
     end_date = request.data["end_date"]
-    contract_duration = request.data["contract_duration"]
+    # contract_duration = request.data["contract_duration"]
     private_key = request.data["private_key"]
 
     try:
