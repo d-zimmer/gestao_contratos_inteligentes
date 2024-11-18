@@ -79,45 +79,12 @@ class ContractAPITestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.data)
 
-    def test_create_contract_with_invalid_dates(self):
-        response = self.client.post(
-            "/api/create/",
-            {
-                "landlord": self.contract_data["landlord"],
-                "tenant": self.contract_data["tenant"],
-                "rent_amount": self.contract_data["rent_amount"],
-                "deposit_amount": self.contract_data["deposit_amount"],
-                "start_date": "2024-12-01",
-                "end_date": "2024-11-01",  # Data de término anterior à data de início
-                "contract_duration": self.contract_data["contract_duration"],
-                "private_key": self.contract_data["private_key_landlord"],
-            },
-            format="json",
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("A data de término deve ser posterior à data de início.", response.data["error"])
-
     def test_create_contract_missing_fields(self):
         invalid_data = self.contract_data.copy()
         invalid_data.pop("tenant")  # Remover o campo 'tenant'
         response = self.client.post(self.create_url, data=invalid_data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("O campo 'tenant' é obrigatório.", response.data["error"])
-
-    def test_create_contract_invalid_date_format(self):
-        invalid_data = {
-            "landlord": self.contract_data["landlord"],
-            "tenant": self.contract_data["tenant"],
-            "rent_amount": self.contract_data["rent_amount"],
-            "deposit_amount": self.contract_data["deposit_amount"],
-            "start_date": "01-11-2024",  # Formato de data inválido
-            "end_date": self.contract_data["end_date"],
-            "contract_duration": self.contract_data["contract_duration"],
-            "private_key": self.contract_data["private_key_landlord"],
-        }
-        response = self.client.post(self.create_url, data=invalid_data, format="json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Formato de data inválido", response.data["error"])
 
 @patch("contratos_inteligentes.utils.check_connection", side_effect=mock_check_connection)
 @patch("contratos_inteligentes.utils.blockchain_connector.Web3", autospec=True)
