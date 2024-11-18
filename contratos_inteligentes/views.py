@@ -43,9 +43,9 @@ def create_contract_api(request):
         "deposit_amount",
         "start_date",
         "end_date",
-        "contract_duration",
         "private_key",
     ]
+
     for field in required_fields:
         if not request.data.get(field):
             return Response(
@@ -53,58 +53,65 @@ def create_contract_api(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    landlord = request.data["landlord"]
-    tenant = request.data["tenant"]
-    rent_amount = request.data["rent_amount"]
-    deposit_amount = request.data["deposit_amount"]
-    start_date = request.data["start_date"]
-    end_date = request.data["end_date"]
-    # contract_duration = request.data["contract_duration"]
-    private_key = request.data["private_key"]
-
     try:
-        contract_duration = int(contract_duration)
-        if rent_amount <= 0 or deposit_amount <= 0 or contract_duration <= 0:
-            raise ValueError("Valores devem ser maiores que zero.")
-    except ValueError:
+        landlord = normalize_address(request.data["landlord"])
+        tenant = normalize_address(request.data["tenant"])
+        rent_amount = int(request.data["rent_amount"])
+        deposit_amount = int(request.data["deposit_amount"])
+        start_timestamp = int(
+            time.mktime(
+                datetime.strptime(request.data["start_date"], "%Y-%m-%dT%H:%M:%S").timetuple()
+            )
+        )
+        end_timestamp = int(
+            time.mktime(
+                datetime.strptime(request.data["end_date"], "%Y-%m-%dT%H:%M:%S").timetuple()
+            )
+        )
+        private_key = request.data["private_key"]
+
+        # Validação adicional
+        if end_timestamp <= start_timestamp:
+            return Response(
+                {"error": "A data de término deve ser posterior à data de início."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Calculando a duração em segundos
+        contract_duration = end_timestamp - start_timestamp
+        if contract_duration <= 0:
+            return Response(
+                {"error": "A duração do contrato deve ser maior que zero."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    except ValueError as e:
         return Response(
-            {
-                "error": "Valores de aluguel, depósito ou duração do contrato devem ser números válidos e maiores que zero."
-            },
+            {"error": f"Erro ao processar os dados: {str(e)}"},
             status=status.HTTP_400_BAD_REQUEST,
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"Erro inesperado: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
     try:
         account = web3.eth.account.from_key(private_key)
     except ValueError:
         return Response(
-            {"error": "Chave privada inválida."}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    try:
-        landlord = normalize_address(landlord)
-        tenant = normalize_address(tenant)
-    except ValueError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        start_date = datetime.datetime.fromisoformat(request.data["start_date"])
-        end_date = datetime.datetime.fromisoformat(request.data["end_date"])
-        if end_date <= start_date:
-            return Response(
-                {"error": "A data de término deve ser posterior à data de início."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-    except ValueError:
-        return Response(
-            {"error": "Formato de data inválido. Use 'YYYY-MM-DDTHH:MM:SS'."},
+            {"error": "Chave privada inválida."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     smart_contract = web3.eth.contract(abi=contract_abi, bytecode=bytecode)
     try:
         transaction = smart_contract.constructor(
-            tenant, rent_amount, deposit_amount, start_date, end_date
+            tenant,
+            rent_amount,
+            deposit_amount,
+            start_timestamp,
+            end_timestamp,
         ).build_transaction(
             {
                 "from": account.address,
@@ -123,10 +130,10 @@ def create_contract_api(request):
         if not new_contract_address:
             return Response(
                 {"error": "Falha ao obter o endereço do contrato na blockchain"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        rent_due_date = start_date + relativedelta(months=1)
 
+        # Criar no banco de dados
         new_contract = RentalContract.objects.create(
             landlord=landlord,
             tenant=tenant,
@@ -134,9 +141,8 @@ def create_contract_api(request):
             deposit_amount=deposit_amount,
             contract_address=new_contract_address,
             status="pending",
-            start_date=start_date,
-            end_date=end_date,
-            rent_due_date=rent_due_date,
+            start_date=datetime.fromtimestamp(start_timestamp),
+            end_date=datetime.fromtimestamp(end_timestamp),
             contract_duration=contract_duration,
         )
 
@@ -145,10 +151,7 @@ def create_contract_api(request):
                 "message": "Contrato criado com sucesso!",
                 "tx_hash": tx_hash.hex(),
                 "contract_address": new_contract_address,
-                "start_date": start_date,
-                "end_date": end_date,
-                "rent_due_date": rent_due_date,
-                "id": new_contract.id,  # Retorna o ID do contrato criado no banco de dados
+                "id": new_contract.id,
             },
             status=status.HTTP_201_CREATED,
         )
