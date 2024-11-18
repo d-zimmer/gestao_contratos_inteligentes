@@ -63,8 +63,6 @@ def create_contract_api(request):
     private_key = request.data["private_key"]
 
     try:
-        # rent_amount = web3.to_wei(int(request.data["rent_amount"]), "ether")  # Converter para WEI
-        # deposit_amount = web3.to_wei(int(request.data["deposit_amount"]), "ether")  # Converter para WEI
         contract_duration = int(contract_duration)
         if rent_amount <= 0 or deposit_amount <= 0 or contract_duration <= 0:
             raise ValueError("Valores devem ser maiores que zero.")
@@ -90,7 +88,6 @@ def create_contract_api(request):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Aceitar formato completo de datetime (YYYY-MM-DDTHH:MM:SS)
         start_date = datetime.datetime.fromisoformat(request.data["start_date"])
         end_date = datetime.datetime.fromisoformat(request.data["end_date"])
         if end_date <= start_date:
