@@ -107,7 +107,7 @@ def create_contract_api(request):
     smart_contract = web3.eth.contract(abi=contract_abi, bytecode=bytecode)
     try:
         transaction = smart_contract.constructor(
-            tenant, rent_amount, deposit_amount, contract_duration
+            tenant, rent_amount, deposit_amount, start_date, end_date
         ).build_transaction(
             {
                 "from": account.address,
