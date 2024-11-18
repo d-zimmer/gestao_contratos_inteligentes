@@ -3,6 +3,7 @@ import json
 import os
 import traceback
 from decimal import Decimal
+from datetime import time
 
 from dateutil.relativedelta import relativedelta  # type:ignore
 from django.views.decorators.csrf import csrf_exempt # type: ignore
