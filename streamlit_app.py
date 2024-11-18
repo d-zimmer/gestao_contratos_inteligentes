@@ -147,26 +147,21 @@ else:
         tenant = st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
         rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1, value=st.session_state.get("rent_amount", 0))
         deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1, value=st.session_state.get("deposit_amount", 0))
-        start_date_date = st.date_input(
-            "Data de Início do Contrato (Data)",
-            st.session_state.get("start_date_date", datetime.now().date())
-        )
-        start_date_time = st.time_input(
-            "Data de Início do Contrato (Hora)",
-            st.session_state.get("start_date_time", datetime.now().time())
-        )
+
+        # Inputs para data e hora
+        start_date_date = st.date_input("Data de Início do Contrato (Data)", st.session_state.get("start_date_date", datetime.now().date()))
+        start_date_time = st.time_input("Data de Início do Contrato (Hora)", st.session_state.get("start_date_time", datetime.now().time()))
         start_date = datetime.combine(start_date_date, start_date_time)
 
-        end_date_date = st.date_input(
-            "Data de Término do Contrato (Data)",
-            st.session_state.get("end_date_date", (datetime.now() + timedelta(minutes=2)).date())
-        )
-        end_date_time = st.time_input(
-            "Data de Término do Contrato (Hora)",
-            st.session_state.get("end_date_time", (datetime.now() + timedelta(minutes=2)).time())
-        )
+        end_date_date = st.date_input("Data de Término do Contrato (Data)", st.session_state.get("end_date_date", (datetime.now() + timedelta(minutes=2)).date()))
+        end_date_time = st.time_input("Data de Término do Contrato (Hora)", st.session_state.get("end_date_time", (datetime.now() + timedelta(minutes=2)).time()))
         end_date = datetime.combine(end_date_date, end_date_time)
-        contract_duration = st.number_input("Duração do Contrato (Meses)", min_value=1, step=1, value=st.session_state.get("contract_duration", 1))
+
+        # Calculando a duração automaticamente em minutos
+        contract_duration = int((end_date - start_date).total_seconds() // 60)
+
+        st.write(f"Duração do Contrato: {contract_duration} minutos")
+
         private_key = st.text_input("Chave Privada (Locador)", type="password")
 
         if st.button("Criar Contrato"):
@@ -182,7 +177,7 @@ else:
                     "deposit_amount": deposit_amount,
                     "start_date": str(start_date),
                     "end_date": str(end_date),
-                    "contract_duration": contract_duration,
+                    "contract_duration": contract_duration,  # Passando duração em minutos
                     "private_key": private_key
                 }
 
@@ -303,31 +298,6 @@ else:
                         st.success(f"Contrato encerrado com sucesso!\nTx Hash: {result['tx_hash']}")
                     else:
                         st.error(f"Erro ao encerrar contrato: {result}")
-
-    elif page == "Simular Passagem de Tempo":
-        st.title("Simular Passagem de Tempo")
-        contract_id = st.text_input("ID do Contrato")
-        data_simulada = st.date_input("Data Simulada", value=datetime.date.today())
-        private_key = st.text_input("Chave Privada (Locador)", type="password")
-
-        if st.button("Avançar Tempo"):
-            if not contract_id:
-                st.error("ID do contrato é obrigatório.")
-            elif not private_key:
-                st.error("Chave privada é obrigatória.")
-            elif not data_simulada:
-                st.error("A data é obrigatória.")
-            else:
-                simulation_data = {
-                    "simulated_date": data_simulada.strftime('%Y-%m-%d'),
-                    "private_key": private_key
-                }
-                with st.spinner("Processando..."):
-                    result, success = api_post(f"api/contracts/{contract_id}/simular_tempo/", simulation_data)
-                    if success:
-                        st.success(f"Simulação completada!\nTx Hash: {result['tx_hash']}\nNova data de término: {result['end_date']}")
-                    else:
-                        st.error(f"Erro ao avançar o tempo: {result}")
 
 # if st.session_state.get("current_page") != "login":
 #     st.sidebar.button("Logout", on_click=handle_logout)

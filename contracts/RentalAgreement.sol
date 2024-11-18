@@ -25,7 +25,13 @@ contract RentalAgreement {
     event PaymentLate(address indexed inquilino, uint256 daysLate);
     event TimeSimulation(uint256 simulatedTimestamp);
 
-    constructor(address _inquilino, uint256 _rentAmount, uint256 _deposit, uint256 _duracaoContratoMeses) {
+    constructor(
+        address _inquilino,
+        uint256 _rentAmount,
+        uint256 _deposit,
+        uint256 _duracaoContratoMeses,
+        uint256 _dataTerminoContrato // Receber diretamente o timestamp
+    ) {
         locador = msg.sender;
         inquilino = _inquilino;
         rentAmount = _rentAmount;
@@ -33,7 +39,7 @@ contract RentalAgreement {
         duracaoContratoMeses = _duracaoContratoMeses;
         isTerminated = false;
         simulatedTime = block.timestamp;
-        dataTerminoContrato = simulatedTime + (duracaoContratoMeses * 30 days);
+        dataTerminoContrato = _dataTerminoContrato; // Usa o timestamp fornecido
     }
 
     function payRent() public payable {
@@ -141,28 +147,14 @@ contract RentalAgreement {
 
     function autoRenew() public {
         require(!isTerminated, "Contrato foi encerrado.");
-        require(isActive, unicode"O contrato não está ativo.");  // Verifica se o contrato está ativo
-        require(isFullySigned(), unicode"O contrato precisa ser assinado por ambas as partes antes de realizar pagamentos.");
-
-        uint256 newEndDate = dataTerminoContrato + (duracaoContratoMeses * 30 days);
-        dataTerminoContrato = newEndDate;
-
-        emit ContractRenewed(locador, inquilino, newEndDate);
-    }
-
-    function simularPassagemDeTempo(uint256 simulatedTimestamp) public {
-        require(msg.sender == locador, unicode"Apenas o locador pode simular o tempo.");
-        require(simulatedTimestamp > block.timestamp, unicode"A data simulada deve ser no futuro.");
-        require(!isTerminated, unicode"Contrato foi encerrado.");
         require(isActive, unicode"O contrato não está ativo.");
+        require(isFullySigned(), unicode"O contrato precisa ser assinado por ambas as partes.");
 
-        simulatedTime = simulatedTimestamp;
+        // Renova o contrato adicionando minutos em vez de meses
+        uint256 durationInSeconds = duracaoContratoMeses * 30 days; // Mantenha a lógica para produção
+        dataTerminoContrato = block.timestamp + (duracaoContratoMeses * 60); // Para testes, substitua 30 dias por 60 segundos
 
-        while (simulatedTime >= dataTerminoContrato) {
-            autoRenew();
-        }
-
-        emit TimeSimulation(simulatedTimestamp);
+        emit ContractRenewed(locador, inquilino, dataTerminoContrato);
     }
 
     function getContractEndDate() public view returns (uint256) {
