@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import json
 import os
 import traceback
@@ -71,14 +71,12 @@ def create_contract_api(request):
         )
         private_key = request.data["private_key"]
 
-        # Validação adicional
         if end_timestamp <= start_timestamp:
             return Response(
                 {"error": "A data de término deve ser posterior à data de início."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Calculando a duração em segundos
         contract_duration = end_timestamp - start_timestamp
         if contract_duration <= 0:
             return Response(
@@ -134,7 +132,6 @@ def create_contract_api(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Criar no banco de dados
         new_contract = RentalContract.objects.create(
             landlord=landlord,
             tenant=tenant,
