@@ -137,11 +137,11 @@ contract RentalAgreement {
 
     function autoRenew() public {
         require(!isTerminated, "Contrato foi encerrado.");
-        require(isActive, unicode"O contrato não está ativo.");
-        require(isFullySigned(), unicode"O contrato precisa ser assinado por ambas as partes.");
+        require(isActive, unicode"Contrato não está ativo."); // Garantir que está ativo
+        require(block.timestamp >= dataTerminoContrato, unicode"Contrato ainda não venceu."); // Garantir que chegou a hora
 
-        uint256 newEndTimestamp = endTimestamp + duracaoContratoSegundos;
-        endTimestamp = newEndTimestamp;
+        uint256 newEndTimestamp = dataTerminoContrato + duracaoContratoSegundos;
+        dataTerminoContrato = newEndTimestamp;
 
         emit ContractRenewed(locador, inquilino, newEndTimestamp);
     }

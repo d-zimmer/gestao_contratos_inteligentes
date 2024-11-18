@@ -639,3 +639,42 @@ def get_landlord_address(request):
         })
     except Usuario.DoesNotExist:
         return JsonResponse({"success": False, "error": "Locador não encontrado"}, status=404)
+    
+@api_view(["POST"])
+def check_and_auto_renew(request):
+    web3 = check_connection()
+    contracts = RentalContract.objects.filter(status="active")
+
+    for contract in contracts:
+        try:
+            smart_contract = web3.eth.contract(
+                address=Web3.to_checksum_address(contract.contract_address),
+                abi=contract_abi,
+            )
+
+            # Verificar se o contrato precisa ser renovado
+            contract_end_date = smart_contract.functions.getContractEndDate().call()
+            if int(time.time()) >= contract_end_date:
+                # Chamar a função de renovação automaticamente
+                tx = smart_contract.functions.autoRenew().build_transaction({
+                    "from": contract.landlord,
+                    "nonce": web3.eth.get_transaction_count(contract.landlord),
+                    "gas": 200000,
+                    "gasPrice": web3.to_wei("20", "gwei"),
+                })
+
+                # Assinar e enviar a transação
+                signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+
+                # Atualizar banco de dados com a nova data de término
+                new_end_date = smart_contract.functions.getContractEndDate().call()
+                contract.end_date = datetime.fromtimestamp(new_end_date)
+                contract.save()
+
+                # info(f"Contrato {contract.id} renovado automaticamente com sucesso.")
+        except Exception as e:
+            # logger.error(f"Erro ao renovar contrato {contract.id}: {str(e)}")
+            break
+
+    return Response({"message": "Verificação e renovação automáticas concluídas."}, status=200)
