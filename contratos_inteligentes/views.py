@@ -61,12 +61,12 @@ def create_contract_api(request):
         deposit_amount = int(request.data["deposit_amount"])
         start_timestamp = int(
             time.mktime(
-                datetime.strptime(request.data["start_date"], "%Y-%m-%dT%H:%M:%S").timetuple()
+                start_datetime = datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S")
             )
         )
         end_timestamp = int(
             time.mktime(
-                datetime.strptime(request.data["end_date"], "%Y-%m-%dT%H:%M:%S").timetuple()
+                end_datetime = datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S")
             )
         )
         private_key = request.data["private_key"]
