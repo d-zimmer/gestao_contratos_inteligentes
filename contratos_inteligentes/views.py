@@ -59,16 +59,13 @@ def create_contract_api(request):
         tenant = normalize_address(request.data["tenant"])
         rent_amount = int(request.data["rent_amount"])
         deposit_amount = int(request.data["deposit_amount"])
-        start_timestamp = int(
-            time.mktime(
-                start_datetime = datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S")
-            )
-        )
-        end_timestamp = int(
-            time.mktime(
-                end_datetime = datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S")
-            )
-        )
+        
+        start_datetime = datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S")
+        end_datetime = datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S")
+
+        start_timestamp = int(start_datetime.timestamp())
+        end_timestamp = int(end_datetime.timestamp())
+
         private_key = request.data["private_key"]
 
         if end_timestamp <= start_timestamp:
