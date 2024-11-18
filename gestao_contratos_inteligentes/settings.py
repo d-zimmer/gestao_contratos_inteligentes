@@ -9,8 +9,8 @@ load_dotenv()
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-key')
 ENVIRONMENT = os.getenv("DJANGO_ENV", "production")
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
+ENCRYPTION_KEY = "PKcPPim9-qXIvpQZSx7k1Vri6YWyZBknUBF72mIHcFA="
 
-# Hosts permitidos
 ALLOWED_HOSTS = [
     "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
     "gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net/",

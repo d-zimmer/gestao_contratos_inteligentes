@@ -15,6 +15,7 @@ from rest_framework import status  # type:ignore
 from rest_framework.decorators import api_view  # type:ignore
 from rest_framework.response import Response  # type:ignore
 from web3 import Account, Web3  # type:ignore
+from cryptography.fernet import Fernet # type: ignore
 
 from .models import ContractEvent, ContractTermination, Payment, RentalContract, Usuario
 from .utils.check_connection import check_connection
@@ -26,6 +27,14 @@ contract_abi, bytecode = load_contract_data()
 
 # global_contract_address = Web3.to_checksum_address("0x5fbdb2315678afecb367f032d93f642f64180aa3")
 # global_contract = web3.eth.contract(address=global_contract_address, abi=contract_abi)
+
+def encrypt_key(key):
+    fernet = Fernet(settings.ENCRYPTION_KEY)
+    return fernet.encrypt(key.encode()).decode()
+
+def decrypt_key(encrypted_key):
+    fernet = Fernet(settings.ENCRYPTION_KEY)
+    return fernet.decrypt(encrypted_key.encode()).decode()
 
 @api_view(["POST"])
 def create_contract_api(request):
@@ -243,6 +252,23 @@ def sign_contract_api(request, contract_id):
             if rental_contract.is_fully_signed():
                 rental_contract.status = "active"
 
+            if account_to_sign.address.lower() == rental_contract.tenant.lower():
+
+                rental_contract.tenant_signature = account_to_sign.address
+
+                inquilino_user = Usuario.objects.get(wallet_address=rental_contract.tenant)
+                encrypted_private_key = encrypt_key(private_key)
+                inquilino_user.private_key = encrypted_private_key
+                inquilino_user.save()
+
+            elif account_to_sign.address.lower() == rental_contract.landlord.lower():
+                rental_contract.landlord_signature = account_to_sign.address
+            else:
+                return Response(
+                    {"error": "Somente locador ou inquilino podem assinar o contrato."},
+                    status=403,
+                )
+
             rental_contract.save()
 
             ContractEvent.objects.create(
@@ -277,7 +303,7 @@ def register_payment_api(request, contract_id):
         web3 = check_connection()
         rental_contract = get_object_or_404(RentalContract, id=contract_id)
         private_key = request.data.get("private_key")
-        payment_type = request.data.get("payment_type")  # 'Aluguel' ou 'Depósito'
+        payment_type = request.data.get("payment_type")
         amount = request.data.get("amount")
 
         if not amount or int(amount) <= 0:
@@ -288,7 +314,6 @@ def register_payment_api(request, contract_id):
         except ValueError:
             return Response({"error": "Chave privada inválida."}, status=400)
 
-        # Verificar se o endereço é o locador ou o inquilino
         if (
             account_to_pay.address.lower() != rental_contract.landlord.lower()
             and account_to_pay.address.lower() != rental_contract.tenant.lower()
@@ -300,7 +325,6 @@ def register_payment_api(request, contract_id):
                 status=403,
             )
 
-        # Carregar o contrato inteligente
         smart_contract = web3.eth.contract(
             address=Web3.to_checksum_address(rental_contract.contract_address),
             abi=contract_abi,
@@ -313,7 +337,6 @@ def register_payment_api(request, contract_id):
                 {"error": f"Erro ao obter estado do contrato: {str(e)}"}, status=500
             )
 
-        # Verifica se o valor do pagamento corresponde ao esperado
         if payment_type == "Aluguel":
             tx_function = smart_contract.functions.payRent()
             expected_amount = smart_contract.functions.getRentAmount().call()
@@ -323,7 +346,6 @@ def register_payment_api(request, contract_id):
         else:
             return Response({"error": "Tipo de pagamento inválido."}, status=400)
 
-        # Verificar se o valor está correto
         if int(amount) != expected_amount:
             return Response(
                 {
@@ -336,7 +358,7 @@ def register_payment_api(request, contract_id):
             tx = tx_function.build_transaction(
                 {
                     "from": account_to_pay.address,
-                    "value": int(amount),  # Enviar o valor já em Wei
+                    "value": int(amount),
                     "nonce": web3.eth.get_transaction_count(account_to_pay.address),
                     "gas": 200000,
                     "gasPrice": web3.to_wei("20", "gwei"),
@@ -346,14 +368,12 @@ def register_payment_api(request, contract_id):
             signed_tx = web3.eth.account.sign_transaction(tx, private_key)
             tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
-            # Esperar pelo recibo da transação
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
             if tx_receipt["status"] == 1:
-                # Registrar o pagamento no banco de dados
                 Payment.objects.create(
                     contract=rental_contract,
-                    amount=amount,  # Valor em Wei
+                    amount=amount,
                     payment_type="rent" if payment_type == "Aluguel" else "deposit",
                     transaction_hash=tx_hash.hex(),
                     is_verified=True,
@@ -420,7 +440,6 @@ def contract_list_api(request):
     ]
     return Response(contracts_data)
 
-
 @api_view(["POST"])
 def terminate_contract_api(request, contract_id):
     rental_contract = get_object_or_404(RentalContract, id=contract_id)
@@ -433,7 +452,6 @@ def terminate_contract_api(request, contract_id):
     except ValueError:
         return Response({"error": "Chave privada inválida."}, status=400)
 
-    # Verificar se o endereço é o locador ou o inquilino
     if (
         account_to_terminate.address.lower() != rental_contract.landlord.lower()
         and account_to_terminate.address.lower() != rental_contract.tenant.lower()
@@ -472,11 +490,9 @@ def terminate_contract_api(request, contract_id):
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
         if tx_receipt["status"] == 1:
-            # Atualizar o status do contrato no banco de dados
             rental_contract.status = "terminated"
             rental_contract.save()
 
-            # Registrar o evento de encerramento
             ContractTermination.objects.create(
                 contract=rental_contract,
                 terminated_by=account_to_terminate.address,
@@ -663,18 +679,20 @@ def check_and_auto_renew(request):
                     "gasPrice": web3.to_wei("20", "gwei"),
                 })
 
-                # Assinar e enviar a transação
+                inquilino_user = Usuario.objects.get(wallet_address=contract.tenant)
+                private_key = decrypt_key(inquilino_user.private_key)
+
                 signed_tx = web3.eth.account.sign_transaction(tx, private_key)
                 tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
-                # Atualizar banco de dados com a nova data de término
                 new_end_date = smart_contract.functions.getContractEndDate().call()
                 contract.end_date = datetime.fromtimestamp(new_end_date)
                 contract.save()
 
-                # info(f"Contrato {contract.id} renovado automaticamente com sucesso.")
         except Exception as e:
-            # logger.error(f"Erro ao renovar contrato {contract.id}: {str(e)}")
-            break
+            return Response(
+                {"error": f"Erro ao renovar contrato {contract.id}: {str(e)}"},
+                status=500
+            )
 
     return Response({"message": "Verificação e renovação automáticas concluídas."}, status=200)
