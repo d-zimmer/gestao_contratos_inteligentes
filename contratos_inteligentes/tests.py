@@ -63,7 +63,7 @@ class ContractAPITestCase(TestCase):
             "private_key_tenant": "0x5990c131de45024a70bed095da1e58a48972ed815694719b4f251a8b6d59e24b",
             "private_key_random": "0xb64759ae9387aa4f9c08b4ac95e797b02bbce33a7aca2bfd2e8df5ba3f9aaa05",
         }
-    
+
     @patch("contratos_inteligentes.utils.check_connection", side_effect=check_connection)
     def test_create_contract_success(self, mock_web3):
         data = {
@@ -71,8 +71,8 @@ class ContractAPITestCase(TestCase):
             "tenant": "0xabcdefabcdefabcdefabcdefabcdefabcdef12345678",
             "rent_amount": 500,
             "deposit_amount": 1000,
-            "start_date": "2024-11-18T10:00:00",  # Formato correto
-            "end_date": "2024-11-18T11:00:00",    # Formato correto
+            "start_date": "2024-11-18T10:00:00",
+            "end_date": "2024-11-18T11:00:00",
             "contract_duration": 2,
             "private_key": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         }
