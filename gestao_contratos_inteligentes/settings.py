@@ -79,13 +79,21 @@ WSGI_APPLICATION = 'gestao_contratos_inteligentes.wsgi.application'
 
 if ENVIRONMENT == "test":
     DATABASES = {
+        # 'default': {
+        #     'ENGINE': 'django.db.backends.postgresql',
+        #     'NAME': os.getenv('DJANGO_DB_NAME'),
+        #     'USER': os.getenv('DJANGO_DB_USER'),
+        #     'PASSWORD': os.getenv('DJANGO_DB_PASSWORD'),
+        #     'HOST': os.getenv('DJANGO_DB_HOST'),
+        #     'PORT': os.getenv('DJANGO_DB_PORT'),
+        # }
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DJANGO_DB_NAME'),
-            'USER': os.getenv('DJANGO_DB_USER'),
-            'PASSWORD': os.getenv('DJANGO_DB_PASSWORD'),
-            'HOST': os.getenv('DJANGO_DB_HOST'),
-            'PORT': os.getenv('DJANGO_DB_PORT'),
+            'NAME': os.getenv('PROD_DB_NAME', 'gestaocontratos'),
+            'USER': os.getenv('PROD_DB_USER', 'david'),
+            'PASSWORD': os.getenv('PROD_DB_PASSWORD', 'postgres'),
+            'HOST': os.getenv('PROD_DB_HOST', 'localhost'),
+            'PORT': os.getenv('PROD_DB_PORT', '5432'),
         }
     }
 else:
