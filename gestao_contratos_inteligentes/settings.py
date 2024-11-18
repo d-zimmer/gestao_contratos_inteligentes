@@ -92,7 +92,7 @@ if ENVIRONMENT == "test":
             'NAME': os.getenv('PROD_DB_NAME', 'gestaocontratos'),
             'USER': os.getenv('PROD_DB_USER', 'david'),
             'PASSWORD': os.getenv('PROD_DB_PASSWORD', 'postgres'),
-            'HOST': os.getenv('PROD_DB_HOST', 'localhost'),
+            'HOST': os.getenv('PROD_DB_HOST', '4.228.59.7'),
             'PORT': os.getenv('PROD_DB_PORT', '5432'),
         }
     }
