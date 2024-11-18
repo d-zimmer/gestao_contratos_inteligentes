@@ -60,11 +60,11 @@ def create_contract_api(request):
         rent_amount = int(request.data["rent_amount"])
         deposit_amount = int(request.data["deposit_amount"])
         
-        start_datetime = datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S")
-        end_datetime = datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S")
+        start_date = datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=None)
+        end_date = datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=None)
 
-        start_timestamp = int(start_datetime.timestamp())
-        end_timestamp = int(end_datetime.timestamp())
+        start_timestamp = int(start_date.timestamp())
+        end_timestamp = int(end_date.timestamp())
 
         private_key = request.data["private_key"]
 

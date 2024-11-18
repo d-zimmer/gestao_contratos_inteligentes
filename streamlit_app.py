@@ -126,8 +126,7 @@ else:
                                  "Assinar Contrato",
                                  "Registrar Pagamento",
                                  "Visualizar Contratos",
-                                 "Encerrar Contrato",
-                                 "Simular Passagem de Tempo"])
+                                 "Encerrar Contrato"])
 
     if page == "Criar Contrato":
         st.title("Criar Novo Contrato")
@@ -148,16 +147,15 @@ else:
         rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1, value=st.session_state.get("rent_amount", 0))
         deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1, value=st.session_state.get("deposit_amount", 0))
 
-        # Inputs para data e hora
         start_date_date = st.date_input("Data de Início do Contrato (Data)", st.session_state.get("start_date_date", datetime.now().date()))
         start_date_time = st.time_input("Data de Início do Contrato (Hora)", st.session_state.get("start_date_time", datetime.now().time()))
+
         start_date = datetime.combine(start_date_date, start_date_time)
 
         end_date_date = st.date_input("Data de Término do Contrato (Data)", st.session_state.get("end_date_date", (datetime.now() + timedelta(minutes=2)).date()))
         end_date_time = st.time_input("Data de Término do Contrato (Hora)", st.session_state.get("end_date_time", (datetime.now() + timedelta(minutes=2)).time()))
         end_date = datetime.combine(end_date_date, end_date_time)
 
-        # Calculando a duração automaticamente em minutos
         contract_duration = int((end_date - start_date).total_seconds() // 60)
 
         st.write(f"Duração do Contrato: {contract_duration} minutos")
@@ -257,6 +255,13 @@ else:
 
         if contracts:
             for contract in contracts:
+                start_date_iso = contract['start_date'].split('+')[0]
+                end_date_iso = contract['end_date'].split('+')[0]
+                
+                start_date = datetime.strptime(start_date_iso, '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y %H:%M:%S')
+                end_date = datetime.strptime(end_date_iso, '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y %H:%M:%S')
+                created_at = datetime.fromisoformat(contract['created_at'].replace('Z', '')).strftime('%d/%m/%Y %H:%M:%S')
+                
                 st.markdown(f"""
                 ***Contrato {contract['id']}***
                 - **Locador**: {contract['landlord']}  
@@ -265,7 +270,9 @@ else:
                 - **Valor do Depósito**: {contract['deposit_amount']} ETH  
                 - **Endereço do Contrato**: {contract['contract_address']}  
                 - **Status**: {contract['status']}  
-                - **Data de Criação**: {contract['created_at']}
+                - **Data de Início**: {start_date}
+                - **Data de Término**: {end_date}  
+                - **Data de Criação**: {created_at}
                 """)
                 st.markdown("---")
 

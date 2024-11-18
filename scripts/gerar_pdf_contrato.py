@@ -38,8 +38,13 @@ def gerar_pdf_contrato(contract):
     c.drawString(2 * cm, y, "CLÁUSULA 2ª - DO PRAZO")
     y -= 0.7 * cm
     c.setFont("Helvetica", 12)
-    start_date = datetime.strptime(contract['start_date'], '%Y-%m-%d').strftime('%d/%m/%Y')
-    end_date = datetime.strptime(contract['end_date'], '%Y-%m-%d').strftime('%d/%m/%Y')
+
+    start_date_iso = contract['start_date'].split('+')[0]
+    end_date_iso = contract['end_date'].split('+')[0]
+
+    start_date = datetime.strptime(start_date_iso, '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y %H:%M:%S')
+    end_date = datetime.strptime(end_date_iso, '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y %H:%M:%S')
+
     c.drawString(2 * cm, y, f"O prazo de locação é de {contract.get('contract_duration', 'N/A')} meses, iniciando-se em {start_date}")
     y -= 0.5 * cm
     c.drawString(2 * cm, y, f"e terminando em {end_date}. Ao término do prazo, o(a) locatário(a) obriga-se a devolver")
