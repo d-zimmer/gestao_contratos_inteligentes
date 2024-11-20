@@ -80,9 +80,9 @@ def create_contract_api(request):
         rent_amount = int(request.data["rent_amount"])
         deposit_amount = int(request.data["deposit_amount"])
 
-        start_date = request.data["start_date"]
+        start_date = int(request.data["start_date"])
         start_date = tratar_data(start_date)
-        end_date = request.data["end_date"]
+        end_date = int(request.data["end_date"])
         end_date = tratar_data(end_date)
 
         private_key = request.data["private_key"]

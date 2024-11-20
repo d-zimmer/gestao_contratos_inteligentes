@@ -185,8 +185,8 @@ else:
                     "tenant": tenant,
                     "rent_amount": rent_amount,
                     "deposit_amount": deposit_amount,
-                    "start_date": start_date_str,
-                    "end_date":   end_date_str,  
+                    "start_date": start_date_timestamp,
+                    "end_date": end_date_timestamp,  
                     "contract_duration": contract_duration,  # Passando duração em minutos
                     "private_key": private_key
                 }
