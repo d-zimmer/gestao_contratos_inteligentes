@@ -79,12 +79,8 @@ def create_contract_api(request):
         tenant = normalize_address(request.data["tenant"])
         rent_amount = int(request.data["rent_amount"])
         deposit_amount = int(request.data["deposit_amount"])
-        start_date = int(request.data["start_date"])
-        end_date = int(request.data["end_date"])
-        
-        start_date = int(start_date.timestamp())
-        end_date = int(end_date.timestamp())
-        
+        start_date = int(request.data["start_date"])  # Deve ser inteiro
+        end_date = int(request.data["end_date"])      # Deve ser inteiro
         private_key = request.data["private_key"]
 
         if end_date <= start_date:
@@ -93,7 +89,7 @@ def create_contract_api(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        contract_duration = int((end_date - start_date).total_seconds() // 60)
+        contract_duration = (end_date - start_date) // 60  # Duração em minutos
         if contract_duration <= 0:
             return Response(
                 {"error": "A duração do contrato deve ser maior que zero."},
