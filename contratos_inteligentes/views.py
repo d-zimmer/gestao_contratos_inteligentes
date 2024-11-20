@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import os
 import traceback
+import pytz 
 from decimal import Decimal
 import time
 
@@ -71,8 +72,12 @@ def create_contract_api(request):
         rent_amount = int(request.data["rent_amount"])
         deposit_amount = int(request.data["deposit_amount"])
         
-        start_date = datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=None)
-        end_date = datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=None)
+        start_date = brazil_tz.localize(
+            datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S")
+        )
+        end_date = brazil_tz.localize(
+            datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S")
+        )
 
         start_timestamp = int(start_date.timestamp())
         end_timestamp = int(end_date.timestamp())
