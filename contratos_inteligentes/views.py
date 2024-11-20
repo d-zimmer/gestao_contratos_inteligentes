@@ -81,9 +81,9 @@ def create_contract_api(request):
         deposit_amount = int(request.data["deposit_amount"])
 
         start_date = request.data["start_date"]
-        # start_date = tratar_data(start_date)
+        start_date = tratar_data(start_date)
         end_date = request.data["end_date"]
-        # end_date = tratar_data(end_date)
+        end_date = tratar_data(end_date)
 
         private_key = request.data["private_key"]
 
@@ -93,7 +93,7 @@ def create_contract_api(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        contract_duration = end_date - start_date
+        contract_duration = (end_date - start_date).total_seconds() // 60
         if contract_duration <= 0:
             return Response(
                 {"error": "A duração do contrato deve ser maior que zero."},
