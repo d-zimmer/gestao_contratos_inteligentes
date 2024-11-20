@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_celery_results',
+    "django_celery_beat",
 ]
 
 # Configurar o backend e o broker do Celery para o banco de dados

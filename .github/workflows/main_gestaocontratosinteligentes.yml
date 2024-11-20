@@ -176,7 +176,8 @@ jobs:
             source venv/bin/activate &&
             python manage.py makemigrations &&
             python manage.py migrate &&
-            python manage.py migrate django_celery_results
+            python manage.py migrate django_celery_results &&
+            python manage.py migrate django_celery_beat
           "
 
       - name: Collect Django static files on VM
