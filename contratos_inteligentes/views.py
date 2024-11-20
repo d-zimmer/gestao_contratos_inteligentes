@@ -21,6 +21,7 @@ from cryptography.fernet import Fernet # type: ignore
 
 from .models import ContractEvent, ContractTermination, Payment, RentalContract, Usuario
 from .utils.check_connection import check_connection
+from .utils.tratar_data import tratar_data
 from .utils.load_contract_data import load_contract_data
 from .utils.log_contract_event import log_contract_event
 from .utils.normalize_address import normalize_address
@@ -48,8 +49,6 @@ def decrypt_key(encrypted_key):
 
 @api_view(["POST"])
 def create_contract_api(request):
-    brazil_tz = pytz.timezone("America/Sao_Paulo")
-
     try:
         web3 = check_connection()
     except Exception as e:
@@ -80,26 +79,21 @@ def create_contract_api(request):
         tenant = normalize_address(request.data["tenant"])
         rent_amount = int(request.data["rent_amount"])
         deposit_amount = int(request.data["deposit_amount"])
-        
-        start_date = brazil_tz.localize(
-            datetime.strptime(request.data["start_date"], "%Y-%m-%d %H:%M:%S")
-        )
-        end_date = brazil_tz.localize(
-            datetime.strptime(request.data["end_date"], "%Y-%m-%d %H:%M:%S")
-        )
 
-        start_timestamp = int(start_date.timestamp())
-        end_timestamp = int(end_date.timestamp())
+        start_date = request.data["start_date"]
+        start_date = tratar_data(start_date)
+        end_date = request.data["end_date"]
+        end_date = tratar_data(end_date)
 
         private_key = request.data["private_key"]
 
-        if end_timestamp <= start_timestamp:
+        if end_date <= start_date:
             return Response(
                 {"error": "A data de término deve ser posterior à data de início."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        contract_duration = end_timestamp - start_timestamp
+        contract_duration = end_date - start_date
         if contract_duration <= 0:
             return Response(
                 {"error": "A duração do contrato deve ser maior que zero."},
@@ -131,8 +125,8 @@ def create_contract_api(request):
             tenant,
             rent_amount,
             deposit_amount,
-            start_timestamp,
-            end_timestamp,
+            start_date,
+            end_date,
         ).build_transaction(
             {
                 "from": account.address,
@@ -161,8 +155,8 @@ def create_contract_api(request):
             deposit_amount=deposit_amount,
             contract_address=new_contract_address,
             status="pending",
-            start_date=datetime.fromtimestamp(start_timestamp),
-            end_date=datetime.fromtimestamp(end_timestamp),
+            start_date=start_date,
+            end_date=end_date,
             contract_duration=contract_duration,
         )
 
