@@ -7,7 +7,7 @@ from datetime import datetime, date, timedelta
 from dotenv import load_dotenv # type:ignore
 from web3 import Web3 # type:ignore
 from scripts.gerar_pdf_contrato import gerar_pdf_contrato
-import pytz # type:ignore
+from pytz import timezone # type:ignore
 
 st.set_page_config(
     page_title="Gestão de Contratos",
@@ -19,7 +19,7 @@ load_dotenv()
 
 DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
 
-brazil_tz = pytz.timezone("America/Sao_Paulo")
+brazil_tz = timezone("America/Sao_Paulo")
 
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
@@ -36,6 +36,13 @@ def obter_endereco_locador():
 def get_address_from_private_key(private_key):
     account = Web3().eth.account.from_key(private_key)
     return account.address
+
+def fetch_contract_events(contract_id):
+    data, success = api_get(f"api/contracts/{contract_id}/events/")
+    if success:
+        return data
+    else:
+        return []
 
 def download_link_pdf(pdf_content, filename="contrato.pdf"):
     b64 = base64.b64encode(pdf_content).decode()
@@ -128,6 +135,8 @@ else:
                                  "Registrar Pagamento",
                                  "Visualizar Contratos",
                                  "Encerrar Contrato"])
+    
+    brazil_tz = timezone("America/Sao_Paulo")
 
     if page == "Criar Contrato":
         st.title("Criar Novo Contrato")
@@ -148,19 +157,18 @@ else:
         rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1, value=st.session_state.get("rent_amount", 0))
         deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1, value=st.session_state.get("deposit_amount", 0))
 
-        start_date_date = st.date_input("Data de Início do Contrato (Data)", st.session_state.get("start_date_date", datetime.now().date()))
-        start_date_time = st.time_input("Data de Início do Contrato (Hora)", st.session_state.get("start_date_time", datetime.now().time()))
-
+        start_date_date = st.date_input("Data de Início do Contrato (Data)", st.session_state.get("start_date_date", datetime.now(brazil_tz).date()))
+        start_date_time = st.time_input("Data de Início do Contrato (Hora)", st.session_state.get("start_date_time", datetime.now(brazil_tz).time()))
         start_date = brazil_tz.localize(datetime.combine(start_date_date, start_date_time))
 
-        end_date_date = st.date_input("Data de Término do Contrato (Data)", st.session_state.get("end_date_date", (datetime.now() + timedelta(minutes=2)).date()))
-        end_date_time = st.time_input("Data de Término do Contrato (Hora)", st.session_state.get("end_date_time", (datetime.now() + timedelta(minutes=2)).time()))
+        end_date_date = st.date_input("Data de Término do Contrato (Data)", st.session_state.get("end_date_date", (datetime.now(brazil_tz) + timedelta(minutes=2)).date()))
+        end_date_time = st.time_input("Data de Término do Contrato (Hora)", st.session_state.get("end_date_time", (datetime.now(brazil_tz) + timedelta(minutes=2)).time()))
         end_date = brazil_tz.localize(datetime.combine(end_date_date, end_date_time))
         
         start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
         end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
-        contract_duration = int((end_date - start_date).total_seconds() // 60)
+        contract_duration = (end_date - start_date).total_seconds() // 60
 
         st.write(f"Duração do Contrato: {contract_duration} minutos")
 
@@ -278,7 +286,20 @@ else:
                 - **Data de Término**: {end_date}  
                 - **Data de Criação**: {created_at}
                 """)
-                st.markdown("---")
+                
+                events = fetch_contract_events(contract['id'])
+                st.subheader("Eventos do Contrato")
+                
+                if events:
+                    for event in events:
+                        st.markdown(f"- **Tipo de Evento**: {event['event_type']}")
+                        st.markdown(f"  - **Hash da Transação**: {event['tx_hash']}")
+                        st.markdown(f"  - **Endereço do Usuário**: {event['from_address']}")
+                        st.markdown(f"  - **Dados do Evento**: {event['event_data']}")
+                        st.markdown(f"  - **Timestamp**: {event['timestamp']}")
+                        st.markdown(f"  - **Bloco**: {event['block_number']}")
+                        st.markdown(f"  - **Gas Usado**: {event['gas_used']}")
+                        st.markdown("---")
 
                 pdf_content = gerar_pdf_contrato(contract)
                 st.download_button(
@@ -288,6 +309,7 @@ else:
                     mime="application/pdf",
                     key=f"download_{contract['id']}"
                 )
+                st.markdown("---")
         else:
             st.write("Nenhum contrato encontrado.")
 
