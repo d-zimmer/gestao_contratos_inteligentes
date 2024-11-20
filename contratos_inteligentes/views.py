@@ -2,8 +2,9 @@ from datetime import datetime
 import json
 import os
 import traceback
-import pytz 
-from decimal import Decimal
+import pytz # type:ignore
+from decimal import Decimal 
+from cryptography.fernet import Fernet, InvalidToken # type:ignore
 import time
 
 from dateutil.relativedelta import relativedelta  # type:ignore
@@ -30,12 +31,20 @@ contract_abi, bytecode = load_contract_data()
 # global_contract = web3.eth.contract(address=global_contract_address, abi=contract_abi)
 
 def encrypt_key(key):
-    fernet = Fernet(settings.ENCRYPTION_KEY)
-    return fernet.encrypt(key.encode()).decode()
+    try:
+        fernet = Fernet(settings.ENCRYPTION_KEY)
+        return fernet.encrypt(key.encode()).decode()
+    except Exception as e:
+        raise ValueError(f"Erro ao criptografar a chave: {str(e)}")
 
 def decrypt_key(encrypted_key):
-    fernet = Fernet(settings.ENCRYPTION_KEY)
-    return fernet.decrypt(encrypted_key.encode()).decode()
+    try:
+        fernet = Fernet(settings.ENCRYPTION_KEY)
+        return fernet.decrypt(encrypted_key.encode()).decode()
+    except InvalidToken:
+        raise ValueError("Token inválido para descriptografia.")
+    except Exception as e:
+        raise ValueError(f"Erro ao descriptografar a chave: {str(e)}")
 
 @api_view(["POST"])
 def create_contract_api(request):
