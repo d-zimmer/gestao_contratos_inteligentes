@@ -175,7 +175,8 @@ jobs:
             cd /home/david_zimmermann/projetos &&
             source venv/bin/activate &&
             python manage.py makemigrations &&
-            python manage.py migrate
+            python manage.py migrate &&
+            python manage.py migrate django_celery_results
           "
 
       - name: Collect Django static files on VM

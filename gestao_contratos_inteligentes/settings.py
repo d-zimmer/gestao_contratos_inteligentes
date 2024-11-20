@@ -36,7 +36,14 @@ INSTALLED_APPS = [
     'contratos_inteligentes',
     'rest_framework',
     'corsheaders',
+    'django_celery_results',
 ]
+
+# Configurar o backend e o broker do Celery para o banco de dados
+CELERY_BROKER_URL = "django-db"
+CELERY_RESULT_BACKEND = "django-db"  # Salvar resultados das tarefas no banco
+CELERY_ACCEPT_CONTENT = ["json"]  # Aceitar apenas JSON
+CELERY_TASK_SERIALIZER = "json"  # Serializar tarefas como JSON
 
 CORS_ALLOWED_ORIGINS = [
     "https://gestaocontratosinteligentes-a3apaqfsc7b0abgh.brazilsouth-01.azurewebsites.net",
