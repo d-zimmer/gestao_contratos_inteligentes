@@ -1,6 +1,10 @@
 from datetime import datetime
 import pytz # type: ignore
 
-def tratar_data(data_str):
-    brazil_tz = pytz.timezone("America/Sao_Paulo")
-    return datetime.strptime(data_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=brazil_tz)
+def tratar_data(data):
+    if isinstance(data, int):  # Se for um timestamp
+        return datetime.fromtimestamp(data)
+    elif isinstance(data, str):  # Se for uma string ISO
+        return datetime.fromisoformat(data)
+    else:
+        raise ValueError("Formato de data inválido.")
