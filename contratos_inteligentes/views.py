@@ -182,11 +182,11 @@ def create_contract_api(request):
 @api_view(["POST"])
 def sign_contract_api(request, contract_id):
     try:
-        # Verificar se os dados da requisição são válidos
+        # Validar dados da requisição
         if not isinstance(request.data, dict):
             return JsonResponse({"error": "Dados da requisição inválidos."}, status=400)
 
-        # Verificar se o contrato existe
+        # Buscar o contrato
         rental_contract = RentalContract.objects.filter(id=contract_id).first()
         if not rental_contract:
             return JsonResponse({"error": "Contrato não encontrado."}, status=404)
@@ -201,97 +201,61 @@ def sign_contract_api(request, contract_id):
             )
 
         # Conectar à blockchain
-        try:
-            web3 = check_connection()
-        except Exception as e:
-            return JsonResponse(
-                {"error": f"Falha ao conectar ao Web3: {e}"}, status=500
-            )
+        web3 = check_connection()
 
         # Validar chave privada
-        try:
-            account_to_sign = web3.eth.account.from_key(private_key)
-        except ValueError:
-            return JsonResponse({"error": "Chave privada inválida."}, status=400)
+        account_to_sign = web3.eth.account.from_key(private_key)
 
         # Normalizar endereços
-        try:
-            landlord = normalize_address(rental_contract.landlord)
-            tenant = normalize_address(rental_contract.tenant)
-        except ValueError as e:
-            return JsonResponse({"error": str(e)}, status=400)
+        landlord = normalize_address(rental_contract.landlord)
+        tenant = normalize_address(rental_contract.tenant)
 
         # Carregar contrato
-        try:
-            smart_contract = web3.eth.contract(
-                address=Web3.to_checksum_address(rental_contract.contract_address),
-                abi=contract_abi,
-            )
-        except Exception as e:
-            return JsonResponse(
-                {"error": f"Erro ao carregar o contrato: {e}"}, status=500
-            )
+        smart_contract = web3.eth.contract(
+            address=Web3.to_checksum_address(rental_contract.contract_address),
+            abi=contract_abi,
+        )
 
         # Verificar se o contrato está implantado
-        try:
-            contract_code = web3.eth.get_code(
-                Web3.to_checksum_address(rental_contract.contract_address)
-            )
-            if contract_code == b"":
-                return JsonResponse({"error": "Contrato não implantado na blockchain."}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": f"Erro ao verificar contrato: {e}"}, status=500)
+        contract_code = web3.eth.get_code(Web3.to_checksum_address(rental_contract.contract_address))
+        if contract_code == b"":
+            return JsonResponse({"error": "Contrato não implantado na blockchain."}, status=404)
 
-        # Verificar se o contrato está ativo
-        if not smart_contract.functions.isContractActive().call():
-            return JsonResponse(
-                {"error": "O contrato já foi encerrado e não pode ser assinado."},
-                status=403,
-            )
-
-        # Verificar se já foi assinado
+        # Verificar se o contrato já está assinado ou encerrado
         if smart_contract.functions.isFullySigned().call():
-            return JsonResponse(
-                {"error": "O contrato já foi assinado por ambas as partes."}, status=403
-            )
+            rental_contract.status = "active"
+            rental_contract.save()
+            return JsonResponse({"error": "O contrato já foi assinado por ambas as partes."}, status=403)
+
+        if not smart_contract.functions.isContractActive().call():
+            return JsonResponse({"error": "O contrato já foi encerrado e não pode ser assinado."}, status=403)
 
         # Verificar tipo de usuário e permissões
         if user_type == "landlord" and account_to_sign.address.lower() != landlord.lower():
-            return JsonResponse(
-                {"error": "Apenas o locador pode assinar como 'landlord'."}, status=403
-            )
+            return JsonResponse({"error": "Apenas o locador pode assinar como 'landlord'."}, status=403)
+
         if user_type == "tenant" and account_to_sign.address.lower() != tenant.lower():
-            return JsonResponse(
-                {"error": "Apenas o inquilino pode assinar como 'tenant'."}, status=403
-            )
+            return JsonResponse({"error": "Apenas o inquilino pode assinar como 'tenant'."}, status=403)
 
         # Construir transação
         nonce = web3.eth.get_transaction_count(account_to_sign.address)
-        try:
-            transaction = smart_contract.functions.signAgreement().build_transaction(
-                {
-                    "from": account_to_sign.address,
-                    "nonce": nonce,
-                    "gas": 300000,
-                    "gasPrice": web3.to_wei("20", "gwei"),
-                }
-            )
-        except Exception as e:
-            return JsonResponse({"error": f"Erro ao construir transação: {e}"}, status=500)
+        transaction = smart_contract.functions.signAgreement().build_transaction(
+            {
+                "from": account_to_sign.address,
+                "nonce": nonce,
+                "gas": 300000,
+                "gasPrice": web3.to_wei("20", "gwei"),
+            }
+        )
 
         # Assinar e enviar transação
-        try:
-            signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-        except Exception as e:
-            return JsonResponse({"error": f"Erro ao enviar transação: {e}"}, status=500)
+        signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
         # Verificar o recibo
         if tx_receipt["status"] != 1:
-            return JsonResponse(
-                {"error": "Falha na execução da transação."}, status=500
-            )
+            return JsonResponse({"error": "Falha na execução da transação."}, status=500)
 
         # Atualizar contrato no banco
         if user_type == "landlord":
@@ -299,7 +263,9 @@ def sign_contract_api(request, contract_id):
         elif user_type == "tenant":
             rental_contract.tenant_signature = account_to_sign.address
 
-        rental_contract.save()
+        if smart_contract.functions.isFullySigned().call():
+            rental_contract.status = "active"
+            rental_contract.save()
 
         # Registrar evento
         ContractEvent.objects.create(
@@ -319,9 +285,7 @@ def sign_contract_api(request, contract_id):
             status=200,
         )
     except Exception as e:
-        return JsonResponse(
-            {"error": f"Erro inesperado: {str(e)}"}, status=500
-        )
+        return JsonResponse({"error": f"Erro inesperado: {str(e)}"}, status=500)
 
 @api_view(["POST"])
 def register_payment_api(request, contract_id):
