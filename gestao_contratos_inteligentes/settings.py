@@ -41,7 +41,7 @@ INSTALLED_APPS = [
 ]
 
 # Configurar o backend e o broker do Celery para o banco de dados
-CELERY_BROKER_URL = "django-db"
+CELERY_BROKER_URL = "sqla+sqlite:///celerydb.sqlite"
 CELERY_RESULT_BACKEND = "django-db"  # Salvar resultados das tarefas no banco
 CELERY_ACCEPT_CONTENT = ["json"]  # Aceitar apenas JSON
 CELERY_TASK_SERIALIZER = "json"  # Serializar tarefas como JSON

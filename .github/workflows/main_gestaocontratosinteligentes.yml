@@ -195,5 +195,7 @@ jobs:
             sudo systemctl restart nginx.service &&
             sudo systemctl restart streamlit.service &&
             sudo systemctl restart ganache.service &&
-            sudo systemctl restart postgresql.service
+            sudo systemctl restart postgresql.service &&
+            sudo systemctl start celery-worker.service &&
+            sudo systemctl start celery-beat.service
           "
