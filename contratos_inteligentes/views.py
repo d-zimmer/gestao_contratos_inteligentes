@@ -31,21 +31,21 @@ contract_abi, bytecode = load_contract_data()
 # global_contract_address = Web3.to_checksum_address("0x5fbdb2315678afecb367f032d93f642f64180aa3")
 # global_contract = web3.eth.contract(address=global_contract_address, abi=contract_abi)
 
-def encrypt_key(key):
-    try:
-        fernet = Fernet(settings.ENCRYPTION_KEY)
-        return fernet.encrypt(key.encode()).decode()
-    except Exception as e:
-        raise ValueError(f"Erro ao criptografar a chave: {str(e)}")
+# def encrypt_key(key):
+#     try:
+#         fernet = Fernet(settings.ENCRYPTION_KEY)
+#         return fernet.encrypt(key.encode()).decode()
+#     except Exception as e:
+#         raise ValueError(f"Erro ao criptografar a chave: {str(e)}")
 
-def decrypt_key(encrypted_key):
-    try:
-        fernet = Fernet(settings.ENCRYPTION_KEY)
-        return fernet.decrypt(encrypted_key.encode()).decode()
-    except InvalidToken:
-        raise ValueError("Token inválido para descriptografia.")
-    except Exception as e:
-        raise ValueError(f"Erro ao descriptografar a chave: {str(e)}")
+# def decrypt_key(encrypted_key):
+#     try:
+#         fernet = Fernet(settings.ENCRYPTION_KEY)
+#         return fernet.decrypt(encrypted_key.encode()).decode()
+#     except InvalidToken:
+#         raise ValueError("Token inválido para descriptografia.")
+#     except Exception as e:
+#         raise ValueError(f"Erro ao descriptografar a chave: {str(e)}")
 
 @api_view(["POST"])
 def create_contract_api(request):
@@ -659,7 +659,7 @@ def check_and_auto_renew(request):
             if int(time.time()) >= contract_end_date:
                 # Chamar a função de renovação automaticamente
                 tx = smart_contract.functions.autoRenew().build_transaction({
-                    "from": contract.landlord,  # Assumindo que o locador renova
+                    "from": contract.landlord,
                     "nonce": web3.eth.get_transaction_count(contract.landlord),
                     "gas": 200000,
                     "gasPrice": web3.to_wei("20", "gwei"),

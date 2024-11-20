@@ -1,7 +1,8 @@
 from celery import shared_task
 from .models import RentalContract
 from .utils import check_connection
-from datetime import datetime, relativedelta
+from datetime import datetime
+from dateutil.datetime import relativedelta
 import pytz
 
 @shared_task
