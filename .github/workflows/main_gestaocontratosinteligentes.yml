@@ -57,7 +57,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           source venv/bin/activate
-          coverage run --source='.' manage.py test --settings=gestao_contratos_inteligentes.settings
+          coverage run --source='.' manage.py test --settings=gestao_contratos_inteligentes.settings --keepdb
           coverage report
           coverage html
         
