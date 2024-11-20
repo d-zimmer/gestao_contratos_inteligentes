@@ -89,7 +89,7 @@ def create_contract_api(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        contract_duration = (end_date - start_date) // 60 
+        contract_duration = int((end_date - start_date).total_seconds() // 60)
         if contract_duration <= 0:
             return Response(
                 {"error": "A duração do contrato deve ser maior que zero."},
