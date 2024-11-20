@@ -165,8 +165,8 @@ else:
         end_date_time = st.time_input("Data de Término do Contrato (Hora)", st.session_state.get("end_date_time", (datetime.now(brazil_tz) + timedelta(minutes=2)).time()))
         end_date = brazil_tz.localize(datetime.combine(end_date_date, end_date_time))
         
-        start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
-        end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
+        start_date_timestamp = int(start_date.timestamp())
+        end_date_timestamp = int(end_date.timestamp())
 
         contract_duration = (end_date - start_date).total_seconds() // 60
 
