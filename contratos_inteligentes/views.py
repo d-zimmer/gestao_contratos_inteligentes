@@ -38,6 +38,8 @@ def decrypt_key(encrypted_key):
 
 @api_view(["POST"])
 def create_contract_api(request):
+    brazil_tz = pytz.timezone("America/Sao_Paulo")
+
     try:
         web3 = check_connection()
     except Exception as e:
@@ -668,31 +670,47 @@ def check_and_auto_renew(request):
                 abi=contract_abi,
             )
 
-            # Verificar se o contrato precisa ser renovado
+            # Obter a data de término do contrato no blockchain
             contract_end_date = smart_contract.functions.getContractEndDate().call()
+
+            # Verificar se o contrato precisa ser renovado
             if int(time.time()) >= contract_end_date:
                 # Chamar a função de renovação automaticamente
                 tx = smart_contract.functions.autoRenew().build_transaction({
-                    "from": contract.landlord,
+                    "from": contract.landlord,  # Assumindo que o locador renova
                     "nonce": web3.eth.get_transaction_count(contract.landlord),
                     "gas": 200000,
                     "gasPrice": web3.to_wei("20", "gwei"),
                 })
 
-                inquilino_user = Usuario.objects.get(wallet_address=contract.tenant)
-                private_key = decrypt_key(inquilino_user.private_key)
+                # Descriptografar a chave privada do locador
+                landlord_user = Usuario.objects.get(wallet_address=contract.landlord)
+                private_key = decrypt_key(landlord_user.private_key)
 
+                # Assinar e enviar a transação
                 signed_tx = web3.eth.account.sign_transaction(tx, private_key)
                 tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
+                # Atualizar a nova data de término no modelo
                 new_end_date = smart_contract.functions.getContractEndDate().call()
                 contract.end_date = datetime.fromtimestamp(new_end_date)
                 contract.save()
 
+                # Logar o evento
+                ContractEvent.objects.create(
+                    contract=contract,
+                    event_type="auto_renew",
+                    event_data={"tx_hash": tx_hash.hex(), "new_end_date": new_end_date},
+                    transaction_hash=tx_hash.hex(),
+                    user_address=contract.landlord,
+                )
+
         except Exception as e:
-            return Response(
-                {"error": f"Erro ao renovar contrato {contract.id}: {str(e)}"},
-                status=500
+            ContractEvent.objects.create(
+                contract=contract,
+                event_type="error",
+                event_data={"details": str(e)},
             )
+            continue
 
     return Response({"message": "Verificação e renovação automáticas concluídas."}, status=200)

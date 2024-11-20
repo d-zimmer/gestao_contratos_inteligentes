@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 from dotenv import load_dotenv # type:ignore
 from web3 import Web3 # type:ignore
 from scripts.gerar_pdf_contrato import gerar_pdf_contrato
+import pytz # type:ignore
 
 st.set_page_config(
     page_title="Gestão de Contratos",
@@ -17,6 +18,8 @@ st.set_page_config(
 load_dotenv()
 
 DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
+
+brazil_tz = pytz.timezone("America/Sao_Paulo")
 
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
@@ -65,8 +68,6 @@ def show_login_page():
         else:
             login_data = {"login": login}
             response, success = api_post("api/login/", login_data)
-
-            st.write("Resposta da API:", response)
 
             if success:
                 st.success("Login realizado com sucesso!")
@@ -150,11 +151,14 @@ else:
         start_date_date = st.date_input("Data de Início do Contrato (Data)", st.session_state.get("start_date_date", datetime.now().date()))
         start_date_time = st.time_input("Data de Início do Contrato (Hora)", st.session_state.get("start_date_time", datetime.now().time()))
 
-        start_date = datetime.combine(start_date_date, start_date_time)
+        start_date = brazil_tz.localize(datetime.combine(start_date_date, start_date_time))
 
         end_date_date = st.date_input("Data de Término do Contrato (Data)", st.session_state.get("end_date_date", (datetime.now() + timedelta(minutes=2)).date()))
         end_date_time = st.time_input("Data de Término do Contrato (Hora)", st.session_state.get("end_date_time", (datetime.now() + timedelta(minutes=2)).time()))
-        end_date = datetime.combine(end_date_date, end_date_time)
+        end_date = brazil_tz.localize(datetime.combine(end_date_date, end_date_time))
+        
+        start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
+        end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
         contract_duration = int((end_date - start_date).total_seconds() // 60)
 
@@ -173,8 +177,8 @@ else:
                     "tenant": tenant,
                     "rent_amount": rent_amount,
                     "deposit_amount": deposit_amount,
-                    "start_date": start_date.strftime("%Y-%m-%d %H:%M:%S"),  # Envia formato completo
-                    "end_date": end_date.strftime("%Y-%m-%d %H:%M:%S"), 
+                    "start_date": start_date_st,
+                    "end_date":   end_date_str,  
                     "contract_duration": contract_duration,  # Passando duração em minutos
                     "private_key": private_key
                 }
