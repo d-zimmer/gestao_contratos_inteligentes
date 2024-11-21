@@ -151,8 +151,8 @@ def create_contract_api(request):
             deposit_amount=deposit_amount,
             contract_address=new_contract_address,
             status="pending",
-            start_date=start_date,
-            end_date=end_date,
+            start_date=datetime.fromtimestamp(start_date),  # Converter para datetime
+            end_date=datetime.fromtimestamp(end_date), 
             contract_duration=contract_duration,
         )
 
