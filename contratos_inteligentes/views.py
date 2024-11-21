@@ -172,16 +172,13 @@ def create_contract_api(request):
 @api_view(["POST"])
 def sign_contract_api(request, contract_id):
     try:
-        # Validar dados da requisição
         if not isinstance(request.data, dict):
             return JsonResponse({"error": "Dados da requisição inválidos."}, status=400)
 
-        # Buscar o contrato
         rental_contract = RentalContract.objects.filter(id=contract_id).first()
         if not rental_contract:
             return JsonResponse({"error": "Contrato não encontrado."}, status=404)
 
-        # Obter dados do request
         private_key = request.data.get("private_key")
         user_type = request.data.get("user_type")
 
@@ -190,28 +187,22 @@ def sign_contract_api(request, contract_id):
                 {"error": "Chave privada e tipo de usuário são obrigatórios."}, status=400
             )
 
-        # Conectar à blockchain
         web3 = check_connection()
 
-        # Validar chave privada
         account_to_sign = web3.eth.account.from_key(private_key)
 
-        # Normalizar endereços
         landlord = normalize_address(rental_contract.landlord)
         tenant = normalize_address(rental_contract.tenant)
 
-        # Carregar contrato
         smart_contract = web3.eth.contract(
             address=Web3.to_checksum_address(rental_contract.contract_address),
             abi=contract_abi,
         )
 
-        # Verificar se o contrato está implantado
         contract_code = web3.eth.get_code(Web3.to_checksum_address(rental_contract.contract_address))
         if contract_code == b"":
             return JsonResponse({"error": "Contrato não implantado na blockchain."}, status=404)
 
-        # Verificar se o contrato já está assinado ou encerrado
         if smart_contract.functions.isFullySigned().call():
             rental_contract.status = "active"
             rental_contract.save()
@@ -220,14 +211,12 @@ def sign_contract_api(request, contract_id):
         if not smart_contract.functions.isContractActive().call():
             return JsonResponse({"error": "O contrato já foi encerrado e não pode ser assinado."}, status=403)
 
-        # Verificar tipo de usuário e permissões
         if user_type == "landlord" and account_to_sign.address.lower() != landlord.lower():
             return JsonResponse({"error": "Apenas o locador pode assinar como 'landlord'."}, status=403)
 
         if user_type == "tenant" and account_to_sign.address.lower() != tenant.lower():
             return JsonResponse({"error": "Apenas o inquilino pode assinar como 'tenant'."}, status=403)
 
-        # Construir transação
         nonce = web3.eth.get_transaction_count(account_to_sign.address)
         transaction = smart_contract.functions.signAgreement().build_transaction(
             {
@@ -238,16 +227,13 @@ def sign_contract_api(request, contract_id):
             }
         )
 
-        # Assinar e enviar transação
         signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
         tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-        # Verificar o recibo
         if tx_receipt["status"] != 1:
             return JsonResponse({"error": "Falha na execução da transação."}, status=500)
 
-        # Atualizar contrato no banco
         if user_type == "landlord":
             rental_contract.landlord_signature = account_to_sign.address
         elif user_type == "tenant":
@@ -255,9 +241,9 @@ def sign_contract_api(request, contract_id):
 
         if smart_contract.functions.isFullySigned().call():
             rental_contract.status = "active"
-            rental_contract.save()
+        
+        rental_contract.save()
 
-        # Registrar evento
         ContractEvent.objects.create(
             contract=rental_contract,
             event_type="sign",
@@ -672,9 +658,11 @@ def check_and_auto_renew(request):
                 # Atualizar a nova data de término no modelo
                 new_end_date = smart_contract.functions.getContractEndDate().call()
                 contract.end_date = datetime.fromtimestamp(new_end_date)
+
+                contract.status = "active"
                 contract.save()
 
-                # Logar o evento
+                # Logar evento de renovação no banco
                 ContractEvent.objects.create(
                     contract=contract,
                     event_type="auto_renew",
