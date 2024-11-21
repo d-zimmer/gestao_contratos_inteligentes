@@ -168,7 +168,7 @@ else:
         start_date_timestamp = int(start_date.timestamp())
         end_date_timestamp = int(end_date.timestamp())
         
-        start_date_str = start_date.isoformat()
+        start_date_str = start_date.isoformat()  # Gera o "T" automaticamente
         end_date_str = end_date.isoformat()
 
         contract_duration = (end_date - start_date).total_seconds() // 60
