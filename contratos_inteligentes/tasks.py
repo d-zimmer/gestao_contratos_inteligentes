@@ -1,8 +1,8 @@
-from celery import shared_task
+from celery import shared_task # type: ignore
 from .models import RentalContract
 from .utils import check_connection
 from datetime import datetime
-from dateutil.datetime import relativedelta
+from dateutil.relativedelta import relativedelta # type: ignore
 import pytz
 
 @shared_task

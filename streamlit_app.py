@@ -17,13 +17,13 @@ st.set_page_config(
 
 load_dotenv()
 
-DJANGO_API_URL = "http://gestaocontratos.brazilsouth.cloudapp.azure.com/"
+DJANGO_API_URL = "https://gestaocontratos.brazilsouth.cloudapp.azure.com"
 
 brazil_tz = timezone("America/Sao_Paulo")
 
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
-    
+
 def obter_endereco_locador():
     # Faz uma requisição para obter o endereço do locador
     response, success = api_get("api/get_landlord_address/")
@@ -60,7 +60,7 @@ def preencher_contrato_automaticamente():
     tenant = st.session_state.get("user_address", "")
     rent_amount = random.randint(250, 1500)
     deposit_amount = random.randint(250, 1500)
-    start_date = datetime.now()
+    start_date = datetime.now(brazil_tz)
     end_date = start_date + timedelta(minutes=2)
     contract_duration = 2
     return landlord, tenant, rent_amount, deposit_amount, start_date, end_date, contract_duration
@@ -94,7 +94,7 @@ def show_login_page():
 
 def api_post(endpoint, data):
     try:
-        response = requests.post(f"{DJANGO_API_URL}{endpoint}", json=data)
+        response = requests.post(f"{DJANGO_API_URL}/{endpoint}", json=data)
         if response.status_code in [200, 201]:
             return response.json(), True
         else:
