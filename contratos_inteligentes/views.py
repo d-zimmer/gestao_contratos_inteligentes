@@ -19,6 +19,7 @@ from rest_framework.response import Response  # type:ignore
 from web3 import Account, Web3  # type:ignore
 from cryptography.fernet import Fernet # type: ignore
 
+from .serializers import RentalContractSerializer
 from .models import ContractEvent, ContractTermination, Payment, RentalContract, Usuario
 from .utils.check_connection import check_connection
 from .utils.tratar_data import tratar_data
@@ -387,8 +388,24 @@ def register_payment_api(request, contract_id):
         )
 
 @api_view(["GET"])
-def contract_list_api(request):
+def contract_list(request):
+    """
+    Lista contratos com possibilidade de filtro por tenant e status.
+    """
+    tenant = request.query_params.get("tenant", None)
+    contract_status = request.query_params.get("status", None)
+
     contracts = RentalContract.objects.all()
+
+    # Filtrar pelo tenant (inquilino)
+    if tenant:
+        contracts = contracts.filter(tenant=tenant)
+
+    # Filtrar pelo status do contrato
+    if contract_status:
+        contracts = contracts.filter(status=contract_status)
+
+    # Formatar os dados dos contratos como no 'contract_list_api'
     contracts_data = [
         {
             "id": contract.id,
@@ -404,7 +421,7 @@ def contract_list_api(request):
         }
         for contract in contracts
     ]
-    return Response(contracts_data)
+    return Response(contracts_data, status=status.HTTP_200_OK)
 
 @api_view(["POST"])
 def terminate_contract_api(request, contract_id):
@@ -680,3 +697,26 @@ def check_and_auto_renew(request):
             continue
 
     return Response({"message": "Verificação e renovação automáticas concluídas."}, status=200)
+
+@api_view(["GET"])
+def get_pending_contract(request):
+    """
+    Retorna um contrato pendente vinculado ao tenant informado.
+    """
+    tenant_address = request.query_params.get("wallet_address", None)
+    if not tenant_address:
+        return Response({"error": "O endereço do inquilino (wallet_address) é obrigatório."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        contract = RentalContract.objects.filter(tenant=tenant_address, status="pending").first()
+        if not contract:
+            return Response({"message": "Nenhum contrato pendente encontrado."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        serializer = RentalContractSerializer(contract)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({"error": f"Erro ao buscar contrato pendente: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)

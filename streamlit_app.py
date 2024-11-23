@@ -91,6 +91,28 @@ def show_login_page():
                     st.error("Erro: 'user_login' ou 'wallet_address' não encontrado na resposta.")
             else:
                 st.error("Erro ao fazer login: Usuário não encontrado.")
+                
+def buscar_contrato_pendente():
+    """Busca contratos pendentes para o inquilino logado."""
+    tenant_address = st.session_state.get("user_address", "")
+    response, success = api_get(f"api/contracts/?tenant={tenant_address}&status=pending")
+    if success and response:
+        return response[0]  # Supondo que o primeiro contrato pendente seja relevante
+    else:
+        return None
+
+def preencher_contrato_com_pendente():
+    """Preenche os campos do contrato com informações do contrato pendente."""
+    contrato_pendente = buscar_contrato_pendente()
+    if contrato_pendente:
+        st.session_state["contract_id"] = contrato_pendente["id"]
+        st.session_state["landlord"] = contrato_pendente["landlord"]
+        st.session_state["tenant"] = contrato_pendente["tenant"]
+        st.session_state["rent_amount"] = contrato_pendente["rent_amount"]
+        st.session_state["deposit_amount"] = contrato_pendente["deposit_amount"]
+        st.session_state["start_date"] = contrato_pendente["start_date"]
+        st.session_state["end_date"] = contrato_pendente["end_date"]
+
 
 def api_post(endpoint, data):
     try:
@@ -135,103 +157,100 @@ else:
                                  "Registrar Pagamento",
                                  "Visualizar Contratos",
                                  "Encerrar Contrato"])
-    
-    brazil_tz = timezone("America/Sao_Paulo")
 
     if page == "Criar Contrato":
         st.title("Criar Novo Contrato")
 
-        if not st.session_state.get("is_landlord", False):
+        # Verifica se há um contrato pendente ao acessar como inquilino
+        if not st.session_state.get("is_landlord", False):  # Caso seja inquilino
             if st.button("Contrato Pendente"):
-                landlord, tenant, rent_amount, deposit_amount, start_date, end_date, contract_duration = preencher_contrato_automaticamente()
-                st.session_state["landlord"] = landlord
-                st.session_state["tenant"] = tenant
-                st.session_state["rent_amount"] = rent_amount
-                st.session_state["deposit_amount"] = deposit_amount
-                st.session_state["start_date"] = start_date
-                st.session_state["end_date"] = end_date
-                st.session_state["contract_duration"] = contract_duration
+                preencher_contrato_com_pendente()
 
-        landlord = st.text_input("Endereço do Locador", st.session_state.get("landlord", ""))
-        tenant = st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
-        rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1, value=st.session_state.get("rent_amount", 0))
-        deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1, value=st.session_state.get("deposit_amount", 0))
+            # Mostrar os campos preenchidos automaticamente
+            st.text_input("Endereço do Locador", st.session_state.get("landlord", ""))
+            st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
+            st.number_input("Valor do Aluguel (Wei)", value=st.session_state.get("rent_amount", 0))
+            st.number_input("Valor do Depósito (Wei)", value=st.session_state.get("deposit_amount", 0))
 
-        start_date_date = st.date_input("Data de Início do Contrato (Data)", st.session_state.get("start_date_date", datetime.now(brazil_tz).date()))
-        start_date_time = st.time_input("Data de Início do Contrato (Hora)", st.session_state.get("start_date_time", datetime.now(brazil_tz).time()))
-        start_date = brazil_tz.localize(datetime.combine(start_date_date, start_date_time))
-
-        end_date_date = st.date_input("Data de Término do Contrato (Data)", st.session_state.get("end_date_date", (datetime.now(brazil_tz) + timedelta(minutes=2)).date()))
-        end_date_time = st.time_input("Data de Término do Contrato (Hora)", st.session_state.get("end_date_time", (datetime.now(brazil_tz) + timedelta(minutes=2)).time()))
-        end_date = brazil_tz.localize(datetime.combine(end_date_date, end_date_time))
-
-        start_date_timestamp = int(start_date.timestamp())
-        end_date_timestamp = int(end_date.timestamp())
-
-        contract_duration = (end_date - start_date).total_seconds() // 60
-
-        st.write(f"Duração do Contrato: {contract_duration} minutos")
-
-        private_key = st.text_input("Chave Privada (Locador)", type="password")
-
-        if st.button("Criar Contrato"):
-            if not landlord or not tenant:
-                st.error("Endereços do locador e inquilino são obrigatórios.")
-            elif not private_key:
-                st.error("Chave privada do locador é obrigatória.")
-            else:
-                contract_data = {
-                    "landlord": landlord,
-                    "tenant": tenant,
-                    "rent_amount": rent_amount,
-                    "deposit_amount": deposit_amount,
-                    "start_date": start_date_timestamp,
-                    "end_date": end_date_timestamp,  
-                    "contract_duration": contract_duration,  # Passando duração em minutos
-                    "private_key": private_key
-                }
-
-                with st.spinner("Processando..."):
-                    result, success = api_post("api/create/", contract_data)
-                    if success:
-                        st.success(f"Contrato criado com sucesso!\nEndereço do Contrato: {result['contract_address']}\nTx Hash: {result['tx_hash']}")
+            if st.session_state.get("contract_id"):
+                # Opção de assinar contrato
+                private_key = st.text_input("Chave Privada", type="password")
+                if st.button("Assinar Contrato"):
+                    if not private_key:
+                        st.error("A chave privada é obrigatória para assinar.")
                     else:
-                        st.error(f"Erro ao criar contrato: {result}")
+                        response, success = api_post(
+                            f"api/contracts/{st.session_state['contract_id']}/sign/",
+                            {"private_key": private_key, "user_type": "tenant"}
+                        )
+                        if success:
+                            st.success("Contrato assinado com sucesso!")
+                        else:
+                            st.error(f"Erro ao assinar contrato: {response}")
+        else:
+            # Caso seja locador, criar um novo contrato
+            landlord = st.text_input("Endereço do Locador", st.session_state.get("user_address", ""))
+            tenant = st.text_input("Endereço do Inquilino")
+            rent_amount = st.number_input("Valor do Aluguel (Wei)", min_value=0, step=1)
+            deposit_amount = st.number_input("Valor do Depósito (Wei)", min_value=0, step=1)
+            start_date = st.date_input("Data de Início do Contrato")
+            start_time = st.time_input("Hora de Início do Contrato")
+            end_date = st.date_input("Data de Término do Contrato")
+            end_time = st.time_input("Hora de Término do Contrato")
+            private_key = st.text_input("Chave Privada (Locador)", type="password")
+
+            start_timestamp = int(datetime.combine(start_date, start_time).timestamp())
+            end_timestamp = int(datetime.combine(end_date, end_time).timestamp())
+            contract_duration = (end_timestamp - start_timestamp) // 60
+
+            if st.button("Criar Contrato"):
+                if not landlord or not tenant:
+                    st.error("Endereços do locador e inquilino são obrigatórios.")
+                elif not private_key:
+                    st.error("Chave privada do locador é obrigatória.")
+                else:
+                    contract_data = {
+                        "landlord": landlord,
+                        "tenant": tenant,
+                        "rent_amount": rent_amount,
+                        "deposit_amount": deposit_amount,
+                        "start_date": start_timestamp,
+                        "end_date": end_timestamp,
+                        "private_key": private_key,
+                    }
+                    response, success = api_post("api/create/", contract_data)
+                    if success:
+                        st.success(f"Contrato criado com sucesso! Endereço do Contrato: {response['contract_address']}")
+                    else:
+                        st.error(f"Erro ao criar contrato: {response}")
 
     elif page == "Assinar Contrato":
-        st.title("Assinar Contrato Inteligente")
-        
-        contract_id = st.text_input("ID do Contrato")
-        private_key = st.text_input("Chave Privada", type="password")
-        user_type = st.selectbox("Tipo de Usuário", ["Locador", "Inquilino"])
-        
-        user_type_mapped = "landlord" if user_type == "Locador" else "tenant"
+        st.title("Assinar Contrato Pendente")
 
-        if st.button("Assinar Contrato"):
-            if not contract_id:
-                st.error("ID do contrato é obrigatório.")
-            elif not private_key:
-                st.error("Chave privada é obrigatória.")
-            else:
-                try:
-                    user_address = get_address_from_private_key(private_key)
-                    st.write(f"Endereço derivado da chave privada: {user_address}")
-                    
-                    signature_data = {
-                        "private_key": private_key,
-                        "user_type": user_type_mapped,
-                        "user_address": user_address
-                    }
+        # Busca contrato pendente para o inquilino logado
+        contrato_pendente = buscar_contrato_pendente()
 
-                    with st.spinner("Processando..."):
-                        result, success = api_post(f"api/contracts/{contract_id}/sign/", signature_data)
+        if contrato_pendente:
+            st.write(f"**Locador:** {contrato_pendente['landlord']}")
+            st.write(f"**Valor do Aluguel:** {contrato_pendente['rent_amount']} WEI")
+            st.write(f"**Data de Início:** {datetime.fromtimestamp(contrato_pendente['start_date']).strftime('%d/%m/%Y %H:%M')}")
+            st.write(f"**Data de Término:** {datetime.fromtimestamp(contrato_pendente['end_date']).strftime('%d/%m/%Y %H:%M')}")
 
-                        if success:
-                            st.success(f"Contrato assinado com sucesso!\nTx Hash: {result['tx_hash']}\nStatus: {result['status']}")
-                        else:
-                            st.error(f"Erro ao assinar contrato: {result}")
-                except Exception as e:
-                    st.error(f"Erro ao derivar endereço da chave privada: {str(e)}")
+            private_key = st.text_input("Chave Privada (Inquilino)", type="password")
+            if st.button("Assinar Contrato"):
+                if not private_key:
+                    st.error("Chave privada é obrigatória para assinar.")
+                else:
+                    response, success = api_post(
+                        f"api/contracts/{contrato_pendente['id']}/sign/",
+                        {"private_key": private_key, "user_type": "tenant"}
+                    )
+                    if success:
+                        st.success("Contrato assinado com sucesso!")
+                    else:
+                        st.error(f"Erro ao assinar contrato: {response}")
+        else:
+            st.info("Nenhum contrato pendente encontrado para este usuário.")
 
     elif page == "Registrar Pagamento":
         st.title("Registrar Pagamento")

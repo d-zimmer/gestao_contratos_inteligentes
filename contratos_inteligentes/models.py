@@ -68,6 +68,10 @@ class RentalContract(models.Model):
 
     class Meta:
         db_table = "contratos"
+        indexes = [
+        models.Index(fields=["status"]),
+        models.Index(fields=["tenant"]),
+        ]
 
 class Usuario(models.Model):
     login = models.CharField(max_length=100, unique=True)
