@@ -388,10 +388,7 @@ def register_payment_api(request, contract_id):
         )
 
 @api_view(["GET"])
-def contract_list(request):
-    """
-    Lista contratos com possibilidade de filtro por tenant e status.
-    """
+def contract_list_api(request):
     tenant = request.query_params.get("tenant", None)
     contract_status = request.query_params.get("status", None)
 
