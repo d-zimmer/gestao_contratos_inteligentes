@@ -1,5 +1,4 @@
 from django.urls import path  # type: ignore
-
 from . import views
 
 urlpatterns = [
@@ -25,6 +24,8 @@ urlpatterns = [
         views.contract_events_api,
         name="contract_events",
     ),
+    path("api/users/", views.fetch_users, name="fetch_users"),
+    path("api/pending_contracts/", views.get_pending_contracts, name="get_pending_contracts"),
     path(
         "api/contracts/<int:contract_id>/simular_tempo/",
         views.simular_tempo,

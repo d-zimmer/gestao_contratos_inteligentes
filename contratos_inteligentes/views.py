@@ -9,6 +9,7 @@ import time
 
 from dateutil.relativedelta import relativedelta  # type:ignore
 from django.views.decorators.csrf import csrf_exempt # type: ignore
+from django.contrib.auth.models import User  # type: ignore
 from django.http import JsonResponse  # type:ignore
 from django.shortcuts import get_object_or_404  # type:ignore
 from django.utils import timezone  # type:ignore
@@ -696,24 +697,47 @@ def check_and_auto_renew(request):
     return Response({"message": "Verificação e renovação automáticas concluídas."}, status=200)
 
 @api_view(["GET"])
-def get_pending_contract(request):
+def get_pending_contracts(request):
     """
-    Retorna um contrato pendente vinculado ao tenant informado.
+    Retorna contratos pendentes filtrados pelo usuário logado.
     """
-    tenant_address = request.query_params.get("wallet_address", None)
-    if not tenant_address:
-        return Response({"error": "O endereço do inquilino (wallet_address) é obrigatório."},
-                        status=status.HTTP_400_BAD_REQUEST)
-
     try:
-        contract = RentalContract.objects.filter(tenant=tenant_address, status="pending").first()
-        if not contract:
-            return Response({"message": "Nenhum contrato pendente encontrado."},
-                            status=status.HTTP_404_NOT_FOUND)
+        user_address = request.query_params.get("user_address")
+        user_type = request.query_params.get("user_type")
 
-        serializer = RentalContractSerializer(contract)
+        if not user_address or not user_type:
+            return Response(
+                {"error": "Parâmetros 'user_address' e 'user_type' são obrigatórios."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user_type == "landlord":
+            contracts = RentalContract.objects.filter(
+                landlord=user_address, status="pending"
+            )
+        elif user_type == "tenant":
+            contracts = RentalContract.objects.filter(
+                tenant=user_address, status="pending"
+            )
+        else:
+            return Response(
+                {"error": "Tipo de usuário inválido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = RentalContractSerializer(contracts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
     except Exception as e:
-        return Response({"error": f"Erro ao buscar contrato pendente: {str(e)}"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(["GET"])
+def fetch_users(request):
+    """
+    Retorna uma lista de todos os usuários com seus endereços de carteira, ids e nomes.
+    """
+    try:
+        # Exemplo: Pegando os campos que você quer retornar (ID, username e email)
+        users = User.objects.all().values("id", "username", "email")
+        return Response(users, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

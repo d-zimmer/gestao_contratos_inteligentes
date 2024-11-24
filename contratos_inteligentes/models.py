@@ -81,7 +81,6 @@ class Usuario(models.Model):
     wallet_address = models.CharField(max_length=42, blank=True, null=True)
     private_key = models.TextField(null=True, blank=True)
 
-
     def clean(self):
         if self.wallet_address and len(self.wallet_address) != 42:
             raise ValidationError("O endereço da carteira deve ter exatamente 42 caracteres.")
