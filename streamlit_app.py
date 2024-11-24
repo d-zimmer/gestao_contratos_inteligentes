@@ -53,9 +53,12 @@ def fetch_contracts():
         return []
     
 def fetch_users():
-    response, success = api_get("api/get_users/")
+    """
+    Busca todos os usuários disponíveis na API.
+    """
+    response, success = api_get("api/users/")
     if success:
-        return [user["wallet_address"] for user in response]
+        return response  # Deve retornar uma lista de usuários com login e wallet_address
     else:
         return []
 
@@ -250,77 +253,74 @@ else:
                                  "Visualizar Contratos",
                                  "Encerrar Contrato"])
 
-    if page == "Criar Contrato":
-        st.title("Criar ou Assinar Contrato")
+    if st.session_state.get("is_landlord", False):  # Caso seja Admin
+        st.subheader("Criar Novo Contrato")
+        
+        # Botão para preenchimento automático
+        if st.button("Preencher com Dados Padrão"):
+            st.session_state["tenant"] = "0x1234567890abcdef1234567890abcdef12345678"  # Exemplo
+            st.session_state["rent_amount"] = random.randint(250, 1500)
+            st.session_state["deposit_amount"] = random.randint(100, 1000)
+            st.session_state["start_date"] = datetime.now(brazil_tz).date()
+            st.session_state["start_time"] = datetime.now(brazil_tz).time()
+            st.session_state["end_date"] = (datetime.now(brazil_tz) + timedelta(minutes=2)).date()
+            st.session_state["end_time"] = (datetime.now(brazil_tz) + timedelta(minutes=2)).time()
 
-        # Verifica se o usuário é Admin ou Inquilino
-        if st.session_state.get("is_landlord", False):  # Caso seja Admin
-            st.subheader("Criar Novo Contrato")
-            
-            # Botão para preenchimento automático
-            if st.button("Preencher com Dados Padrão"):
-                st.session_state["tenant"] = "0x1234567890abcdef1234567890abcdef12345678"  # Exemplo
-                st.session_state["rent_amount"] = random.randint(250, 1500)
-                st.session_state["deposit_amount"] = random.randint(100, 1000)
-                st.session_state["start_date"] = datetime.now(brazil_tz).date()
-                st.session_state["start_time"] = datetime.now(brazil_tz).time()
-                st.session_state["end_date"] = (datetime.now(brazil_tz) + timedelta(minutes=2)).date()
-                st.session_state["end_time"] = (datetime.now(brazil_tz) + timedelta(minutes=2)).time()
-            
-            # Campos para criar o contrato
-            landlord = st.text_input("Endereço do Locador", st.session_state.get("user_address", ""))
+        landlord = st.text_input("Endereço do Locador", st.session_state.get("user_address", ""))
 
-            # Busca a lista de usuários para seleção do inquilino
-            user_list = fetch_users()
-            if user_list:
-                tenant = st.selectbox("Selecione o Inquilino", options=[""] + user_list, key="tenant_select")
+        users = fetch_users()
+
+        if users:
+            tenant_options = {user['login']: user['wallet_address'] for user in users}
+            selected_tenant = st.selectbox("Selecione o Inquilino", list(tenant_options.keys()))
+            tenant = tenant_options[selected_tenant]
+        else:
+            st.warning("Nenhum usuário disponível para seleção. Insira manualmente.")
+            tenant = st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
+        
+        rent_amount = st.number_input(
+            "Valor do Aluguel (Wei)", 
+            min_value=0.0,
+            step=1.0,
+            value=float(st.session_state.get("rent_amount", 0))
+        )
+        deposit_amount = st.number_input(
+            "Valor do Depósito (Wei)", 
+            min_value=0.0,
+            step=1.0,
+            value=float(st.session_state.get("deposit_amount", 0))
+        )
+        start_date = st.date_input("Data de Início do Contrato", value=st.session_state.get("start_date", datetime.now(brazil_tz).date()))
+        start_time = st.time_input("Hora de Início do Contrato", value=st.session_state.get("start_time", datetime.now(brazil_tz).time()))
+        end_date = st.date_input("Data de Término do Contrato", value=st.session_state.get("end_date", (datetime.now(brazil_tz) + timedelta(minutes=2)).date()))
+        end_time = st.time_input("Hora de Término do Contrato", value=st.session_state.get("end_time", (datetime.now(brazil_tz) + timedelta(minutes=2)).time()))
+        private_key = st.text_input("Chave Privada (Locador)", type="password")
+
+        # Converte datas para timestamps
+        start_timestamp = int(datetime.combine(start_date, start_time).timestamp())
+        end_timestamp = int(datetime.combine(end_date, end_time).timestamp())
+        contract_duration = (end_timestamp - start_timestamp) // 60
+
+        if st.button("Criar Contrato"):
+            if not landlord or not tenant:
+                st.error("Endereços do locador e inquilino são obrigatórios.")
+            elif not private_key:
+                st.error("Chave privada do locador é obrigatória.")
             else:
-                tenant = st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
-                st.warning("Nenhum usuário disponível para seleção. Insira manualmente.")
-
-            rent_amount = st.number_input(
-                "Valor do Aluguel (Wei)", 
-                min_value=0.0,
-                step=1.0,
-                value=float(st.session_state.get("rent_amount", 0))  # Convertendo para float
-            )
-            deposit_amount = st.number_input(
-                "Valor do Depósito (Wei)", 
-                min_value=0.0,
-                step=1.0,
-                value=float(st.session_state.get("deposit_amount", 0))  # Convertendo para float
-            )
-            start_date = st.date_input("Data de Início do Contrato", value=st.session_state.get("start_date", datetime.now(brazil_tz).date()))
-            start_time = st.time_input("Hora de Início do Contrato", value=st.session_state.get("start_time", datetime.now(brazil_tz).time()))
-            end_date = st.date_input("Data de Término do Contrato", value=st.session_state.get("end_date", (datetime.now(brazil_tz) + timedelta(minutes=2)).date()))
-            end_time = st.time_input("Hora de Término do Contrato", value=st.session_state.get("end_time", (datetime.now(brazil_tz) + timedelta(minutes=2)).time()))
-            private_key = st.text_input("Chave Privada (Locador)", type="password")
-
-            # Converte datas para timestamps
-            start_timestamp = int(datetime.combine(start_date, start_time).timestamp())
-            end_timestamp = int(datetime.combine(end_date, end_time).timestamp())
-            contract_duration = (end_timestamp - start_timestamp) // 60
-
-            if st.button("Criar Contrato"):
-                if not landlord or not tenant:
-                    st.error("Endereços do locador e inquilino são obrigatórios.")
-                elif not private_key:
-                    st.error("Chave privada do locador é obrigatória.")
+                contract_data = {
+                    "landlord": landlord,
+                    "tenant": tenant,
+                    "rent_amount": rent_amount,
+                    "deposit_amount": deposit_amount,
+                    "start_date": start_timestamp,
+                    "end_date": end_timestamp,
+                    "private_key": private_key,
+                }
+                response, success = api_post("api/create/", contract_data)
+                if success:
+                    st.success(f"Contrato criado com sucesso! Endereço do Contrato: {response['contract_address']}")
                 else:
-                    contract_data = {
-                        "landlord": landlord,
-                        "tenant": tenant,
-                        "rent_amount": rent_amount,
-                        "deposit_amount": deposit_amount,
-                        "start_date": start_timestamp,
-                        "end_date": end_timestamp,
-                        "private_key": private_key,
-                    }
-                    response, success = api_post("api/create/", contract_data)
-                    if success:
-                        st.success(f"Contrato criado com sucesso! Endereço do Contrato: {response['contract_address']}")
-                    else:
-                        st.error(f"Erro ao criar contrato: {response}")
+                    st.error(f"Erro ao criar contrato: {response}")
 
     elif page == "Assinar Contrato":
         st.title("Assinar Contratos Pendentes")
@@ -411,6 +411,3 @@ else:
                         st.success(f"Contrato encerrado com sucesso!\nTx Hash: {result['tx_hash']}")
                     else:
                         st.error(f"Erro ao encerrar contrato: {result}")
-
-# if st.session_state.get("current_page") != "login":
-#     st.sidebar.button("Logout", on_click=handle_logout)

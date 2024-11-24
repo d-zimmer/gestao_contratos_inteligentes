@@ -737,7 +737,7 @@ def fetch_users(request):
     """
     try:
         # Exemplo: Pegando os campos que você quer retornar (ID, username e email)
-        users = User.objects.all().values("id", "username", "email")
+        users = User.objects.all().values("login", "wallet_address")
         return Response(users, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
