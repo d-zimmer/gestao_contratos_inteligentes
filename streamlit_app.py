@@ -85,7 +85,7 @@ def show_visualizar_contratos_page():
     contracts = fetch_contracts()
 
     if contracts:
-        # Exibir tabela inicial com IDs, Locador e Inquilino
+        # Exibir tabela inicial com IDs, Locador e locatário
         df = pd.DataFrame(contracts)
         selected_contract_id = st.selectbox(
             "Selecione um contrato para visualizar detalhes",
@@ -103,7 +103,7 @@ def show_visualizar_contratos_page():
             with st.expander(f"Contrato {selected_contract['id']}", expanded=True):
                 st.markdown(f"""
                 **Locador:** {selected_contract['landlord']}  
-                **Inquilino:** {selected_contract['tenant']}  
+                **locatário:** {selected_contract['tenant']}  
                 **Valor do Aluguel:** {selected_contract['rent_amount']} ETH  
                 **Valor do Depósito:** {selected_contract['deposit_amount']} ETH  
                 **Endereço do Contrato:** {selected_contract['contract_address']}  
@@ -253,7 +253,7 @@ else:
     if page == "Criar Contrato":
         st.title("Criar ou Assinar Contrato")
 
-        # Verifica se o usuário é Admin ou Inquilino
+        # Verifica se o usuário é Admin ou locatário
         if st.session_state.get("is_landlord", False):  # Caso seja Admin
             st.subheader("Criar Novo Contrato")
             
@@ -270,12 +270,12 @@ else:
             # Campos para criar o contrato
             landlord = st.text_input("Endereço do Locador", st.session_state.get("user_address", ""))
 
-            # Busca a lista de usuários para seleção do inquilino
+            # Busca a lista de usuários para seleção do locatário
             user_list = fetch_users()
             if user_list:
-                tenant = st.selectbox("Selecione o Inquilino", options=[""] + user_list, key="tenant_select")
+                tenant = st.selectbox("Selecione o locatário", options=[""] + user_list, key="tenant_select")
             else:
-                tenant = st.text_input("Endereço do Inquilino", st.session_state.get("tenant", ""))
+                tenant = st.text_input("Endereço do locatário", st.session_state.get("tenant", ""))
                 st.warning("Nenhum usuário disponível para seleção. Insira manualmente.")
 
             rent_amount = st.number_input(
@@ -303,7 +303,7 @@ else:
 
             if st.button("Criar Contrato"):
                 if not landlord or not tenant:
-                    st.error("Endereços do locador e inquilino são obrigatórios.")
+                    st.error("Endereços do locador e locatário são obrigatórios.")
                 elif not private_key:
                     st.error("Chave privada do locador é obrigatória.")
                 else:
@@ -338,7 +338,7 @@ else:
                 contract = contract_options[selected_contract]
                 st.subheader("Detalhes do Contrato Selecionado")
                 st.write(f"**Locador:** {contract['landlord']}")
-                st.write(f"**Inquilino:** {contract['tenant']}")
+                st.write(f"**locatário:** {contract['tenant']}")
                 st.write(f"**Valor do Aluguel:** {contract['rent_amount']} WEI")
                 st.write(f"**Valor do Depósito:** {contract['deposit_amount']} WEI")
                 st.write(f"**Status:** {contract['status']}")
@@ -366,7 +366,7 @@ else:
         st.title("Registrar Pagamento")
         
         contract_id = st.text_input("ID do Contrato")
-        private_key = st.text_input("Chave Privada (Inquilino)", type="password")
+        private_key = st.text_input("Chave Privada (locatário)", type="password")
         payment_type = st.selectbox("Tipo de Pagamento", ["Aluguel", "Depósito"])
         amount = st.number_input("Valor do Pagamento (ETH)", min_value=0.0, step=0.01)
 
